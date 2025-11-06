@@ -1,0 +1,7 @@
+{
+  "name": "Elite Roofer Website Demo",
+  "description": "A comprehensive, production-ready roofing company website featuring an AI receptionist, conversational chatbot, smart estimate calculator, service area validator, photo uploader, and an automated scheduling system to streamline operations and boost lead conversion.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
