@@ -1,6 +1,6 @@
+
 import { useState, useRef, useCallback } from 'react';
 
-// FIX: Add a global declaration for window.webkitAudioContext to support older browsers.
 declare global {
   interface Window {
     webkitAudioContext: typeof AudioContext;
@@ -45,17 +45,46 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
     const outputAudioContextRef = useRef<AudioContext | null>(null);
     const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    // Fix: Add a ref to hold the MediaStream object.
+    const mediaStreamRef = useRef<MediaStream | null>(null);
     const playbackQueueRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const nextStartTimeRef = useRef<number>(0);
 
     const startProcessing = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Fix: Store the stream in the ref.
+            mediaStreamRef.current = stream;
             
-            const inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            // Input context (16k required for Gemini Live input)
+            // Use try/catch because some browsers/hardware may not support 16k directly
+            let inputContext;
+            try {
+                inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            } catch (e) {
+                console.warn("Could not create 16k AudioContext, falling back to default sample rate.", e);
+                inputContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // Explicitly resume context to prevent "suspended" state issues
+            if (inputContext.state === 'suspended') {
+                await inputContext.resume().catch(e => console.warn("Failed to resume input context", e));
+            }
             inputAudioContextRef.current = inputContext;
 
-            const outputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            // Output context (24k required for Gemini Live output)
+            let outputContext;
+            try {
+                outputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            } catch (e) {
+                console.warn("Could not create 24k AudioContext for output, using default.", e);
+                outputContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // Explicitly resume context to prevent "suspended" state issues
+            if (outputContext.state === 'suspended') {
+                await outputContext.resume().catch(e => console.warn("Failed to resume output context", e));
+            }
             outputAudioContextRef.current = outputContext;
             nextStartTimeRef.current = outputContext.currentTime;
 
@@ -63,6 +92,7 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
             const source = inputContext.createMediaStreamSource(stream);
             mediaStreamSourceRef.current = source;
 
+            // Use 4096 buffer size for balance between latency and performance
             const scriptProcessor = inputContext.createScriptProcessor(4096, 1, 1);
             scriptProcessorRef.current = scriptProcessor;
 
@@ -77,98 +107,99 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
             setIsProcessing(true);
         } catch (error) {
             console.error("Error starting audio processing:", error);
-            if (error instanceof DOMException && error.name === 'NotAllowedError') {
-                 alert("Microphone access was denied. Please allow microphone access in your browser settings to use the voice agent.");
-            } else {
-                alert("Could not access the microphone. Please check your browser permissions.");
-            }
+            // Ensure cleanup happens if partial initialization occurred
+            if (inputAudioContextRef.current) inputAudioContextRef.current.close();
+            if (outputAudioContextRef.current) outputAudioContextRef.current.close();
+            if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
+            
             throw error; // Propagate error to be caught by caller
         }
     }, [onAudioData]);
 
-    const stopProcessing = useCallback(() => {
-        if (!isProcessing) return;
-
-        // Stop microphone input processing
-        if (scriptProcessorRef.current && mediaStreamSourceRef.current && inputAudioContextRef.current) {
-            mediaStreamSourceRef.current.disconnect();
-            scriptProcessorRef.current.disconnect();
-            scriptProcessorRef.current.onaudioprocess = null;
-        }
-        if (inputAudioContextRef.current?.state !== 'closed') {
-            inputAudioContextRef.current?.close();
-        }
-        
-        // Stop any ongoing playback
-        if (outputAudioContextRef.current) {
-            playbackQueueRef.current.forEach(source => {
-                try {
-                    source.stop();
-                } catch (e) {
-                    // Ignore errors from stopping already stopped sources
-                }
-            });
-            playbackQueueRef.current.clear();
-
-            if (outputAudioContextRef.current.state !== 'closed') {
-                 outputAudioContextRef.current.close();
-            }
-        }
-        
-        // Clean up stream tracks
-        mediaStreamSourceRef.current?.mediaStream.getTracks().forEach(track => track.stop());
-        
-        // Reset refs
-        inputAudioContextRef.current = null;
-        outputAudioContextRef.current = null;
-        scriptProcessorRef.current = null;
-        mediaStreamSourceRef.current = null;
-        
-        setIsProcessing(false);
-    }, [isProcessing]);
-
-    const playAudio = useCallback(async (base64Audio: string) => {
-        const outputContext = outputAudioContextRef.current;
-        if (!outputContext || outputContext.state === 'closed') {
-             console.warn("Output audio context is not available for playback.");
-             return;
-        }
-
-        try {
-            const decodedBytes = decode(base64Audio);
-            const audioBuffer = await decodeAudioData(decodedBytes, outputContext, 24000, 1);
-            
-            const source = outputContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(outputContext.destination);
-
-            const currentTime = outputContext.currentTime;
-            const startTime = Math.max(currentTime, nextStartTimeRef.current);
-
-            source.start(startTime);
-            nextStartTimeRef.current = startTime + audioBuffer.duration;
-
-            playbackQueueRef.current.add(source);
-            source.onended = () => {
-                playbackQueueRef.current.delete(source);
-            };
-
-        } catch (error) {
-            console.error("Error playing audio:", error);
-        }
-    }, []);
-    
     const interruptPlayback = useCallback(() => {
-        if (outputAudioContextRef.current) {
-            playbackQueueRef.current.forEach(source => {
+        const playbackQueue = playbackQueueRef.current;
+        if (playbackQueue.size > 0) {
+            for (const source of playbackQueue) {
                 try {
                     source.stop();
-                } catch(e) { /* ignore */ }
-            });
-            playbackQueueRef.current.clear();
+                } catch(e) { /* ignore already stopped */ }
+            }
+            playbackQueue.clear();
+        }
+        if (outputAudioContextRef.current) {
+            nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
+        } else {
             nextStartTimeRef.current = 0;
         }
     }, []);
 
+    const playAudio = useCallback(async (base64Audio: string) => {
+        const outputContext = outputAudioContextRef.current;
+        if (!outputContext || outputContext.state === 'closed') return;
+    
+        try {
+            const decodedData = decode(base64Audio);
+            const audioBuffer = await decodeAudioData(
+              decodedData,
+              outputContext,
+              24000,
+              1,
+            );
+        
+            const source = outputContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(outputContext.destination);
+        
+            const currentTime = outputContext.currentTime;
+            const startTime = Math.max(currentTime, nextStartTimeRef.current);
+            
+            source.start(startTime);
+            nextStartTimeRef.current = startTime + audioBuffer.duration;
+            
+            const playbackQueue = playbackQueueRef.current;
+            playbackQueue.add(source);
+            source.onended = () => {
+              playbackQueue.delete(source);
+            };
+        } catch (error) {
+            console.error("Error playing audio:", error);
+        }
+    }, []);
+
+    const stopProcessing = useCallback(() => {
+        // Always attempt cleanup even if isProcessing is false to ensure clean state
+        
+        // Stop microphone input processing
+        if (scriptProcessorRef.current) {
+            scriptProcessorRef.current.disconnect();
+            scriptProcessorRef.current.onaudioprocess = null;
+            scriptProcessorRef.current = null;
+        }
+        
+        if (mediaStreamSourceRef.current) {
+            mediaStreamSourceRef.current.disconnect();
+            mediaStreamSourceRef.current = null;
+        }
+
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(track => track.stop());
+            mediaStreamRef.current = null;
+        }
+        
+        if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+            inputAudioContextRef.current.close().catch(console.error);
+            inputAudioContextRef.current = null;
+        }
+
+        // Stop any ongoing playback and close output context
+        interruptPlayback();
+        if (outputAudioContextRef.current && outputAudioContextRef.current.state !== 'closed') {
+            outputAudioContextRef.current.close().catch(console.error);
+            outputAudioContextRef.current = null;
+        }
+        
+        setIsProcessing(false);
+    }, [interruptPlayback]);
+    
     return { isProcessing, startProcessing, stopProcessing, playAudio, interruptPlayback };
 };

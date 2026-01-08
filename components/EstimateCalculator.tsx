@@ -1,7 +1,4 @@
-
-
 import React, { useState } from 'react';
-// FIX: Renamed imported function from getAI-Estimate to getAIEstimate to be a valid identifier.
 import { getAIEstimate } from '../services/geminiService';
 import { EstimateFormData } from '../types';
 
@@ -11,7 +8,11 @@ type EstimateResult = {
   explanation: string;
 };
 
-const EstimateCalculator: React.FC = () => {
+interface EstimateCalculatorProps {
+  onScheduleClick: () => void;
+}
+
+const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<EstimateFormData>({
     roofType: 'Asphalt Shingle',
@@ -45,7 +46,6 @@ const EstimateCalculator: React.FC = () => {
     setLoading(true);
     setResult(null);
     try {
-      // FIX: Renamed function call from getAI-Estimate to getAIEstimate.
       const estimate = await getAIEstimate(formData);
       setResult(estimate);
       setStep(4);
@@ -125,7 +125,7 @@ const EstimateCalculator: React.FC = () => {
                   <div className="space-y-1 text-center">
                     <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     <div className="flex text-sm text-gray-600">
-                      <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"><p>Upload a file</p><input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*" /></label>
+                      <label htmlFor="file-upload" title="Upload a file or drag and drop" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"><p>Upload a file</p><input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*" /></label>
                       <p className="pl-1">or drag and drop</p>
                     </div>
                     <p className="text-xs text-gray-500">{uploadedFile ? uploadedFile.name : 'PNG, JPG up to 10MB'}</p>
@@ -154,9 +154,13 @@ const EstimateCalculator: React.FC = () => {
                 <p className="mt-4 text-gray-700">{result?.explanation}</p>
             </div>
             <p className="mt-6 text-lg font-semibold">Ready for the next step?</p>
-            <a href="#schedule" className="mt-2 inline-block bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105">
+            <button
+              type="button"
+              onClick={onScheduleClick}
+              className="mt-2 inline-block bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105"
+            >
                 Schedule a Free Inspection
-            </a>
+            </button>
           </div>
         );
       default:
@@ -167,59 +171,58 @@ const EstimateCalculator: React.FC = () => {
   const progress = (step / (result ? 4 : 3)) * 100;
   
   return (
-    <section id="estimate" className="py-16 md:py-24 bg-gray-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
-            Instant AI-Powered Estimate
-          </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600">
-            Answer a few questions to get a real-time, data-driven estimate for your roofing project in under 60 seconds.
-          </p>
-        </div>
+    <>
+      <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600 text-center mb-12">
+        Answer a few questions to get a real-time, data-driven estimate for your roofing project in under 60 seconds.
+      </p>
+      
+      <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+        {step <= 3 && (
+          <div className="mb-8">
+              <div className="relative pt-1">
+                  <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                      <div style={{ width: `${progress}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"></div>
+                  </div>
+              </div>
+              <p className="text-center text-sm text-gray-600 font-medium">Step {step} of 3</p>
+          </div>
+        )}
         
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
-          {step <= 3 && (
-            <div className="mb-8">
-                <div className="relative pt-1">
-                    <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
-                        <div style={{ width: `${progress}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"></div>
-                    </div>
-                </div>
-                <p className="text-center text-sm text-gray-600 font-medium">Step {step} of 3</p>
-            </div>
-          )}
+        <form onSubmit={handleSubmit}>
+          {renderStep()}
           
-          <form onSubmit={handleSubmit}>
-            {renderStep()}
-            
-            <div className="mt-8 flex justify-between items-center">
-              {step > 1 && step < 4 && (
-                <button type="button" onClick={prevStep} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
-                  Back
-                </button>
-              )}
-              {step < 3 && (
-                <button type="button" onClick={nextStep} className="ml-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                  Next
-                </button>
-              )}
-              {step === 3 && (
-                <button type="submit" disabled={loading} className="ml-auto bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 flex items-center gap-2">
-                  {loading ? 'Generating...' : 'Get My Estimate'}
-                  {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                </button>
-              )}
-              {step === 4 && (
-                <button type="button" onClick={() => { setStep(1); setResult(null); }} className="mx-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
-                  Start New Estimate
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
+          <div className="mt-8 flex justify-between items-center">
+            {step > 1 && step < 4 && (
+              <button type="button" onClick={prevStep} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
+                Back
+              </button>
+            )}
+            {step < 3 && (
+              <button type="button" onClick={nextStep} className="ml-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                Next
+              </button>
+            )}
+            {step === 3 && (
+              <button type="submit" disabled={loading} className="ml-auto bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 flex items-center gap-2">
+                {loading ? (
+                  <>
+                    <span>Generating...</span>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </>
+                ) : (
+                  'Get My Estimate'
+                )}
+              </button>
+            )}
+            {step === 4 && (
+              <button type="button" onClick={() => { setStep(1); setResult(null); }} className="mx-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                Start New Estimate
+              </button>
+            )}
+          </div>
+        </form>
       </div>
-    </section>
+    </>
   );
 };
 

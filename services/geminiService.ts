@@ -1,6 +1,6 @@
 import { GoogleGenAI, Chat, Type, Blob as GenAIBlob } from "@google/genai";
 import { CHATBOT_SYSTEM_INSTRUCTION } from '../constants';
-import { EstimateFormData, ChatMessage } from '../types';
+import { EstimateFormData, ChatbotResponse } from '../types';
 
 let ai: GoogleGenAI;
 let chat: Chat;
@@ -22,20 +22,70 @@ const initializeChat = () => {
             model: 'gemini-2.5-flash',
             config: {
                 systemInstruction: CHATBOT_SYSTEM_INSTRUCTION,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        reply: { type: Type.STRING },
+                        suggestedQuestions: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                        }
+                    },
+                    required: ["reply", "suggestedQuestions"]
+                }
             },
         });
     }
 }
 
-// FIX: Removed unused history parameter. The chat object maintains its own history.
-export const sendMessageToChatbot = async (message: string): Promise<string> => {
+export const sendMessageToChatbot = async (message: string, imageFile?: File): Promise<ChatbotResponse> => {
     try {
         initializeChat();
-        const response = await chat.sendMessage({ message });
-        return response.text;
+        
+        let response;
+        if (imageFile) {
+            const imagePart = await fileToGenerativePart(imageFile);
+            // Construct a multipart message
+            response = await chat.sendMessage({ 
+                message: { 
+                    role: 'user', 
+                    parts: [imagePart, { text: message || "Analyze this image." }] 
+                } 
+            });
+        } else {
+             response = await chat.sendMessage({ message });
+        }
+
+        const jsonString = response.text?.trim() || "{}";
+        
+        let parsedResult: any;
+        try {
+            parsedResult = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error("Error parsing JSON response from AI:", parseError, "Raw response:", jsonString);
+            return {
+                reply: jsonString || "I'm sorry, I received an unusual response. Please try again.",
+                suggestedQuestions: ["What services do you offer?", "Can I get a free estimate?", "Do you handle storm damage?"]
+            };
+        }
+
+        const reply = typeof parsedResult.reply === 'string' ? parsedResult.reply : "I'm sorry, I couldn't formulate a proper response. Please ask me something else.";
+        const suggestedQuestions = Array.isArray(parsedResult.suggestedQuestions)
+            ? parsedResult.suggestedQuestions.filter((q: any): q is string => typeof q === 'string')
+            : [];
+
+        return {
+            reply,
+            suggestedQuestions
+        };
+
     } catch (error) {
-        console.error("Error sending message to chatbot:", error);
-        return "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.";
+        console.error("Error sending message to chatbot API:", error);
+        return {
+            reply: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+            suggestedQuestions: ["What services do you offer?", "How can I contact support?"]
+        };
     }
 };
 
@@ -63,10 +113,10 @@ export const analyzeRoofImage = async (imageFile: File): Promise<string> => {
             contents: { parts: [imagePart, textPart] },
         });
 
-        return response.text;
+        return response.text || "No analysis could be generated.";
     } catch (error) {
         console.error("Error analyzing roof image:", error);
-        throw new Error("Failed to analyze the roof image. Please try again later.");
+        throw error;
     }
 };
 
@@ -79,26 +129,23 @@ export const analyzeRoofVideo = async (videoFile: File): Promise<string> => {
         };
 
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-pro', // Using a more capable model for video
+            model: 'gemini-2.5-pro', 
             contents: { parts: [videoPart, textPart] },
         });
 
-        return response.text;
+        return response.text || "No video analysis could be generated.";
     } catch (error) {
         console.error("Error analyzing roof video:", error);
-        throw new Error("Failed to analyze the roof video. Please try again later. This can be due to video length or format.");
+        throw error;
     }
 };
 
-// FIX: Renamed function from getAI-Estimate to getAIEstimate to be a valid identifier.
 export const getAIEstimate = async (formData: EstimateFormData) => {
     try {
         const aiInstance = getAI();
         const prompt = `
-            You are an expert AI roofing cost estimator for a company in a high-cost-of-living area like Southern California.
+            You are an expert AI roofing cost estimator.
             Generate a rough, non-binding cost estimate range for a roof project based on the following data.
-            The estimate should be for labor and materials.
-
             Project Data:
             - Roof Material: ${formData.roofType}
             - Square Footage: ${formData.sqft} sq ft
@@ -106,12 +153,7 @@ export const getAIEstimate = async (formData: EstimateFormData) => {
             - Number of Stories: ${formData.stories}
             - Location Zip Code: ${formData.zipCode}
 
-            Please provide the estimate in a JSON format. The JSON object should have three keys:
-            1. 'lowEstimate': A number representing the lower end of the cost range.
-            2. 'highEstimate': A number representing the higher end of the cost range.
-            3. 'explanation': A brief (2-3 sentences) user-friendly explanation of the estimate, mentioning the key factors that influence the cost, and emphasizing that this is a preliminary estimate and a formal quote requires an on-site inspection.
-
-            Base your estimate on typical costs for premium materials and labor in an affluent area. Be realistic.
+            Please provide the estimate in a JSON format with 'lowEstimate', 'highEstimate', and 'explanation'.
         `;
         
         const response = await aiInstance.models.generateContent({
@@ -131,18 +173,83 @@ export const getAIEstimate = async (formData: EstimateFormData) => {
             },
         });
         
-        const jsonString = response.text.trim();
-        const result = JSON.parse(jsonString);
-        return result;
-
+        const jsonString = response.text?.trim() || "{}";
+        return JSON.parse(jsonString);
     } catch (error) {
         console.error("Error getting AI estimate:", error);
-        throw new Error("Failed to generate an AI-powered estimate. Please check your inputs or try again later.");
+        throw error;
     }
 };
 
+export const generateHeroImage = async (prompt: string): Promise<string> => {
+    try {
+        const aiInstance = getAI();
+        const fullPrompt = `A beautiful, photorealistic image of a house roof for a roofing company website hero section. Prompt: "${prompt}"`;
+        
+        const response = await aiInstance.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: fullPrompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/jpeg',
+              aspectRatio: '16:9',
+            },
+        });
 
-// Helper functions for Live API audio processing
+        const base64ImageBytes = response.generatedImages?.[0]?.image?.imageBytes;
+        if (!base64ImageBytes) throw new Error("No image data received from API.");
+        return `data:image/jpeg;base64,${base64ImageBytes}`;
+    } catch (error) {
+        console.error("Error generating hero image:", error);
+        throw error;
+    }
+};
+
+export const generateHeroVideo = async (prompt: string): Promise<string> => {
+    try {
+        const aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        // Use the 'fast' model as it might have higher availability/different quota limits
+        let operation = await aiInstance.models.generateVideos({
+          model: 'veo-3.1-fast-generate-preview',
+          prompt: prompt,
+          config: {
+            numberOfVideos: 1,
+            resolution: '1080p',
+            aspectRatio: '16:9'
+          }
+        });
+
+        while (!operation.done) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          operation = await aiInstance.operations.getVideosOperation({operation: operation});
+        }
+        
+        if (operation.error) {
+            throw operation.error;
+        }
+
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (!downloadLink) {
+            throw new Error("Video generation completed but no video URI was returned.");
+        }
+
+        const separator = downloadLink.includes('?') ? '&' : '?';
+        const response = await fetch(`${downloadLink}${separator}key=${process.env.API_KEY}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch video: ${response.status} - ${errorText}`);
+        }
+        
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error: any) {
+        console.error("Error generating hero video:", error);
+        throw error;
+    }
+};
+
 function encode(bytes: Uint8Array) {
   let binary = '';
   const len = bytes.byteLength;

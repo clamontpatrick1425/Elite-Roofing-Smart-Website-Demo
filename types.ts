@@ -1,4 +1,5 @@
 
+import React from 'react';
 
 export interface Service {
   icon: React.ComponentType<{ className?: string }>;
@@ -15,6 +16,13 @@ export interface Testimonial {
 export interface ChatMessage {
   role: 'user' | 'model' | 'system';
   content: string;
+  suggestedQuestions?: string[];
+  userImage?: string; // Data URL for the image
+}
+
+export interface ChatbotResponse {
+  reply: string;
+  suggestedQuestions: string[];
 }
 
 export interface EstimateFormData {
@@ -31,4 +39,14 @@ export interface GalleryImage {
     after: string;
     title: string;
     description: string;
+}
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export interface FAQCategory {
+  category: string;
+  items: FAQItem[];
 }
