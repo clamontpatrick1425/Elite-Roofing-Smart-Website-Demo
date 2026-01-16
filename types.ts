@@ -18,11 +18,13 @@ export interface ChatMessage {
   content: string;
   suggestedQuestions?: string[];
   userImage?: string; // Data URL for the image
+  sources?: { uri: string; title: string }[];
 }
 
 export interface ChatbotResponse {
   reply: string;
   suggestedQuestions: string[];
+  sources?: { uri: string; title: string }[];
 }
 
 export interface EstimateFormData {

@@ -4,8 +4,9 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import Services from './components/Services';
 import WhyChooseUs from './components/WhyChooseUs';
+import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
-import Chatbot from './components/Chatbot';
+import AIHub from './components/AIHub';
 import FAQModal from './components/FAQModal';
 import SchedulerModal from './components/SchedulerModal';
 import DamageAssessorModal from './components/DamageAssessorModal';
@@ -15,6 +16,7 @@ import LeadCaptureModal from './components/LeadCaptureModal';
 import LeadCaptureForm from './components/LeadCaptureForm';
 import AboutUsModal from './components/AboutUsModal';
 import GalleryModal from './components/GalleryModal';
+import ProjectVisualizerModal from './components/ProjectVisualizerModal';
 import { GalleryImage } from './types';
 import { VoiceAgentHandle } from './components/VoiceAgentOrb';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
@@ -25,6 +27,7 @@ const App: React.FC = () => {
   const [isSchedulerModalOpen, setIsSchedulerModalOpen] = useState(false);
   const [isDamageAssessorModalOpen, setIsDamageAssessorModalOpen] = useState(false);
   const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
+  const [isVisualizerModalOpen, setIsVisualizerModalOpen] = useState(false);
   const [isLeadCaptureModalOpen, setIsLeadCaptureModalOpen] = useState(false);
   const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
@@ -35,6 +38,7 @@ const App: React.FC = () => {
   const handleScheduleFromModal = () => {
     setIsDamageAssessorModalOpen(false);
     setIsEstimateModalOpen(false);
+    setIsVisualizerModalOpen(false);
     setIsSchedulerModalOpen(true);
   };
 
@@ -65,26 +69,24 @@ const App: React.FC = () => {
       />
       
       <main className="flex flex-col">
-        {/* Full Width Hero Section */}
         <Hero 
           onScheduleClick={openSchedulerModal} 
           onEstimateClick={openEstimateModal}
           voiceAgentRef={voiceAgentRef}
         />
         
-        {/* Full Width Services Section */}
         <Services />
         
-        {/* Full Width AI Tools Section - Moved Up */}
         <AITools
           onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
           onEstimateClick={openEstimateModal}
+          onVisualizerClick={() => setIsVisualizerModalOpen(true)}
         />
         
-        {/* Full Width Why Choose Us Section */}
         <WhyChooseUs />
 
-        {/* Full Width Service Area Validator Section */}
+        <Testimonials />
+
         <section className="py-12 bg-white dark:bg-gray-900">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-5xl mx-auto transform hover:-translate-y-1 transition-transform duration-300">
@@ -93,7 +95,6 @@ const App: React.FC = () => {
             </div>
         </section>
 
-        {/* Full Width Lead Capture Section */}
         <section className="py-20 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
@@ -109,7 +110,10 @@ const App: React.FC = () => {
         onPrivacyPolicyClick={() => setIsPrivacyPolicyModalOpen(true)}
       />
       
-      <Chatbot onOpenEstimate={openEstimateModal} />
+      <AIHub 
+        onOpenEstimate={openEstimateModal} 
+        onOpenDamageAssessor={() => setIsDamageAssessorModalOpen(true)} 
+      />
       
       {/* Modals */}
       <FAQModal isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
@@ -123,6 +127,10 @@ const App: React.FC = () => {
         isOpen={isEstimateModalOpen}
         onClose={() => setIsEstimateModalOpen(false)}
         onScheduleClick={handleScheduleFromModal}
+      />
+      <ProjectVisualizerModal 
+        isOpen={isVisualizerModalOpen} 
+        onClose={() => setIsVisualizerModalOpen(false)} 
       />
       <LeadCaptureModal isOpen={isLeadCaptureModalOpen} onClose={() => setIsLeadCaptureModalOpen(false)} />
       <AboutUsModal isOpen={isAboutUsModalOpen} onClose={() => setIsAboutUsModalOpen(false)} />

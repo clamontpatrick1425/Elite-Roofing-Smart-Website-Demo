@@ -1,263 +1,329 @@
-import { GoogleGenAI, Chat, Type, Blob as GenAIBlob } from "@google/genai";
+import { GoogleGenAI, Chat, Type, Blob as GenAIBlob, Modality, GenerateContentResponse } from "@google/genai";
 import { CHATBOT_SYSTEM_INSTRUCTION } from '../constants';
-import { EstimateFormData, ChatbotResponse } from '../types';
+import { EstimateFormData } from '../types';
 
-let ai: GoogleGenAI;
-let chat: Chat;
-
-const getAI = () => {
-  if (!ai) {
-    if (!process.env.API_KEY) {
-      throw new Error("API_KEY environment variable not set");
-    }
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to initialize AI instance with the provided API key.
+const createAIInstance = () => {
+  const apiKey = (process.env.API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
   }
-  return ai;
+  return new GoogleGenAI({ apiKey });
 };
 
-const initializeChat = () => {
-    if (!chat) {
-        const aiInstance = getAI();
-        chat = aiInstance.chats.create({
-            model: 'gemini-2.5-flash',
-            config: {
-                systemInstruction: CHATBOT_SYSTEM_INSTRUCTION,
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        reply: { type: Type.STRING },
-                        suggestedQuestions: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
-                        }
-                    },
-                    required: ["reply", "suggestedQuestions"]
-                }
+let activeChatSession: Chat | null = null;
+
+export const resetChatSession = () => {
+  activeChatSession = null;
+};
+
+// Helper to get or create a chat session with system instructions and JSON schema.
+const getChatSession = (ai: GoogleGenAI) => {
+  if (!activeChatSession) {
+    activeChatSession = ai.chats.create({
+      model: 'gemini-3-flash-preview',
+      config: {
+        systemInstruction: CHATBOT_SYSTEM_INSTRUCTION + "\nIMPORTANT: Your entire response must be a single valid JSON object. Do not include any text outside the JSON structure.",
+        responseMimeType: "application/json",
+        tools: [{ googleSearch: {} }],
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            reply: { type: Type.STRING },
+            suggestedQuestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
             },
-        });
-    }
-}
-
-export const sendMessageToChatbot = async (message: string, imageFile?: File): Promise<ChatbotResponse> => {
-    try {
-        initializeChat();
-        
-        let response;
-        if (imageFile) {
-            const imagePart = await fileToGenerativePart(imageFile);
-            // Construct a multipart message
-            response = await chat.sendMessage({ 
-                message: { 
-                    role: 'user', 
-                    parts: [imagePart, { text: message || "Analyze this image." }] 
-                } 
-            });
-        } else {
-             response = await chat.sendMessage({ message });
+            appointmentSummary: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                address: { type: Type.STRING },
+                time: { type: Type.STRING },
+                email: { type: Type.STRING },
+                phone: { type: Type.STRING }
+              }
+            }
+          },
+          required: ["reply"]
         }
-
-        const jsonString = response.text?.trim() || "{}";
-        
-        let parsedResult: any;
-        try {
-            parsedResult = JSON.parse(jsonString);
-        } catch (parseError) {
-            console.error("Error parsing JSON response from AI:", parseError, "Raw response:", jsonString);
-            return {
-                reply: jsonString || "I'm sorry, I received an unusual response. Please try again.",
-                suggestedQuestions: ["What services do you offer?", "Can I get a free estimate?", "Do you handle storm damage?"]
-            };
-        }
-
-        const reply = typeof parsedResult.reply === 'string' ? parsedResult.reply : "I'm sorry, I couldn't formulate a proper response. Please ask me something else.";
-        const suggestedQuestions = Array.isArray(parsedResult.suggestedQuestions)
-            ? parsedResult.suggestedQuestions.filter((q: any): q is string => typeof q === 'string')
-            : [];
-
-        return {
-            reply,
-            suggestedQuestions
-        };
-
-    } catch (error) {
-        console.error("Error sending message to chatbot API:", error);
-        return {
-            reply: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
-            suggestedQuestions: ["What services do you offer?", "How can I contact support?"]
-        };
-    }
-};
-
-const fileToGenerativePart = async (file: File) => {
-    const base64EncodedDataPromise = new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
+      },
     });
-    return {
-        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-    };
+  }
+  return activeChatSession;
+};
+
+// Centralized error handling for Gemini API responses.
+const handleApiError = (error: any) => {
+  let message = "An unexpected error occurred.";
+  let status = "N/A";
+  let fullLog = "";
+
+  try {
+    if (typeof error === 'string') {
+      message = error;
+      fullLog = error;
+    } else if (error instanceof Error) {
+      message = error.message;
+      status = String((error as any).status || (error as any).code || "N/A");
+      fullLog = `${error.name}: ${error.message}`;
+    } else if (typeof error === 'object' && error !== null) {
+      const deepError = error.error || error;
+      message = deepError.message || deepError.description || "Unknown Object Error";
+      status = String(deepError.status || deepError.code || deepError.errorCode || "N/A");
+      fullLog = JSON.stringify(error);
+    }
+  } catch (e) {
+    message = "Error parsing API response details.";
+    fullLog = "Failed to stringify error object.";
+  }
+
+  console.error(`Gemini API Error Detail: ${message}`);
+  const errorStr = (fullLog + " " + message).toLowerCase();
+
+  // Handle Transient Errors (Retriable)
+  if (status === "503" || status === "504" || errorStr.includes("deadline expired") || errorStr.includes("deadline exceeded") || errorStr.includes("unavailable")) {
+      throw new Error("TRANSIENT_ERROR");
+  }
+
+  // Handle Quota and Rate Limits
+  if (status === "429" || errorStr.includes("quota") || errorStr.includes("limit exceeded") || errorStr.includes("rate limit") || errorStr.includes("resource_exhausted")) {
+    resetChatSession();
+    throw new Error("QUOTA_EXHAUSTED");
+  }
+  
+  // Handle Authentication and Permission Issues
+  if (status === "400" || status === "401" || status === "403" || errorStr.includes("expired") || errorStr.includes("not found") || errorStr.includes("invalid") || errorStr.includes("requested entity was not found") || errorStr.includes("api key not found")) {
+    resetChatSession();
+    throw new Error("INVALID_KEY_OR_PROJECT");
+  }
+
+  throw new Error(message);
+};
+
+// Exponential backoff retry logic.
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries > 0 && (error.message === "QUOTA_EXHAUSTED" || error.message === "TRANSIENT_ERROR")) {
+      console.log(`Retrying API call (${retries} retries left)...`);
+      await new Promise(r => setTimeout(r, delay));
+      return withRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
 }
 
-export const analyzeRoofImage = async (imageFile: File): Promise<string> => {
+// Utility to extract JSON from model output.
+const extractJson = (text: string) => {
     try {
-        const aiInstance = getAI();
-        const imagePart = await fileToGenerativePart(imageFile);
-        const textPart = {
-            text: `Analyze the provided image of a roof. As a roofing expert, identify potential issues such as missing, cracked, or curled shingles, algae or moss growth, damaged flashing, or signs of water damage. Provide a bullet-point summary of your findings using asterisks, followed by a 'Recommendation' paragraph. Keep the tone helpful and professional. If the image is not a roof, state that you cannot analyze it and ask for a picture of a roof.`
-        };
-
-        const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [imagePart, textPart] },
-        });
-
-        return response.text || "No analysis could be generated.";
-    } catch (error) {
-        console.error("Error analyzing roof image:", error);
-        throw error;
-    }
-};
-
-export const analyzeRoofVideo = async (videoFile: File): Promise<string> => {
-    try {
-        const aiInstance = getAI();
-        const videoPart = await fileToGenerativePart(videoFile);
-        const textPart = {
-            text: `Analyze the provided video of a roof. As a roofing expert, carefully review the footage. Identify potential issues such as missing, cracked, or curled shingles, algae or moss growth, damaged flashing, signs of water damage, or any other visible defects. Provide a bullet-point summary of your findings using asterisks, followed by a 'Recommendation' paragraph. Keep the tone helpful and professional. If the video does not show a roof, state that you cannot analyze it and ask for a video of a roof.`
-        };
-
-        const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-pro', 
-            contents: { parts: [videoPart, textPart] },
-        });
-
-        return response.text || "No video analysis could be generated.";
-    } catch (error) {
-        console.error("Error analyzing roof video:", error);
-        throw error;
-    }
-};
-
-export const getAIEstimate = async (formData: EstimateFormData) => {
-    try {
-        const aiInstance = getAI();
-        const prompt = `
-            You are an expert AI roofing cost estimator.
-            Generate a rough, non-binding cost estimate range for a roof project based on the following data.
-            Project Data:
-            - Roof Material: ${formData.roofType}
-            - Square Footage: ${formData.sqft} sq ft
-            - Roof Slope: ${formData.slope}
-            - Number of Stories: ${formData.stories}
-            - Location Zip Code: ${formData.zipCode}
-
-            Please provide the estimate in a JSON format with 'lowEstimate', 'highEstimate', and 'explanation'.
-        `;
-        
-        const response = await aiInstance.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        lowEstimate: { type: Type.NUMBER },
-                        highEstimate: { type: Type.NUMBER },
-                        explanation: { type: Type.STRING },
-                    },
-                    required: ["lowEstimate", "highEstimate", "explanation"],
-                },
-            },
-        });
-        
-        const jsonString = response.text?.trim() || "{}";
-        return JSON.parse(jsonString);
-    } catch (error) {
-        console.error("Error getting AI estimate:", error);
-        throw error;
-    }
-};
-
-export const generateHeroImage = async (prompt: string): Promise<string> => {
-    try {
-        const aiInstance = getAI();
-        const fullPrompt = `A beautiful, photorealistic image of a house roof for a roofing company website hero section. Prompt: "${prompt}"`;
-        
-        const response = await aiInstance.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: fullPrompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/jpeg',
-              aspectRatio: '16:9',
-            },
-        });
-
-        const base64ImageBytes = response.generatedImages?.[0]?.image?.imageBytes;
-        if (!base64ImageBytes) throw new Error("No image data received from API.");
-        return `data:image/jpeg;base64,${base64ImageBytes}`;
-    } catch (error) {
-        console.error("Error generating hero image:", error);
-        throw error;
-    }
-};
-
-export const generateHeroVideo = async (prompt: string): Promise<string> => {
-    try {
-        const aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        // Use the 'fast' model as it might have higher availability/different quota limits
-        let operation = await aiInstance.models.generateVideos({
-          model: 'veo-3.1-fast-generate-preview',
-          prompt: prompt,
-          config: {
-            numberOfVideos: 1,
-            resolution: '1080p',
-            aspectRatio: '16:9'
-          }
-        });
-
-        while (!operation.done) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          operation = await aiInstance.operations.getVideosOperation({operation: operation});
+        return JSON.parse(text);
+    } catch (e) {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (innerE) {
+                const clean = jsonMatch[0].replace(/^```json\n?/, '').replace(/\n?```$/, '');
+                try {
+                    return JSON.parse(clean);
+                } catch (finalE) {
+                    return null;
+                }
+            }
         }
-        
-        if (operation.error) {
-            throw operation.error;
-        }
-
-        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-        if (!downloadLink) {
-            throw new Error("Video generation completed but no video URI was returned.");
-        }
-
-        const separator = downloadLink.includes('?') ? '&' : '?';
-        const response = await fetch(`${downloadLink}${separator}key=${process.env.API_KEY}`);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch video: ${response.status} - ${errorText}`);
-        }
-        
-        const blob = await response.blob();
-        return URL.createObjectURL(blob);
-    } catch (error: any) {
-        console.error("Error generating hero video:", error);
-        throw error;
     }
+    return null;
 };
 
-function encode(bytes: Uint8Array) {
+// Utility to convert File objects to base64 strings.
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
+// Utility to encode bytes to base64.
+const encode = (bytes: Uint8Array) => {
   let binary = '';
   const len = bytes.byteLength;
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
-}
+};
+
+export const sendMessageToChatbotStream = async (
+  message: string,
+  onChunk: (text: string) => void
+): Promise<any> => {
+  return withRetry(async () => {
+    try {
+      const ai = createAIInstance();
+      const chat = getChatSession(ai);
+
+      const result = await chat.sendMessageStream({ message });
+      let fullText = "";
+      let lastExtractedReply = "";
+
+      for await (const chunk of result) {
+        const chunkText = (chunk as GenerateContentResponse).text || "";
+        fullText += chunkText;
+
+        const replyMatch = fullText.match(/"reply":\s*"((?:[^"\\]|\\.)*)"/);
+        if (replyMatch && replyMatch[1]) {
+          const currentReply = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          if (currentReply.length > lastExtractedReply.length) {
+            onChunk(currentReply.substring(lastExtractedReply.length));
+            lastExtractedReply = currentReply;
+          }
+        }
+      }
+
+      const parsed = extractJson(fullText);
+      if (parsed) return parsed;
+      
+      return { reply: lastExtractedReply || "I'm Hannah, how can I help?" };
+    } catch (error: any) {
+      return handleApiError(error);
+    }
+  });
+};
+
+export const generateComparisonImage = async (prompt: string): Promise<string> => {
+  return withRetry(async () => {
+    try {
+      const ai = createAIInstance();
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: `Create a high-resolution, side-by-side before and after comparison of a residential home. Left side (Before): ${prompt.split(' vs ')[0]}. Right side (After): ${prompt.split(' vs ')[1] || 'Brand new premium roof'}. Style: Cinematic wide drone shot, 45-degree angle, professional real estate photography.` }] },
+        config: { imageConfig: { aspectRatio: "16:9" } }
+      });
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+      }
+      throw new Error("No image generated.");
+    } catch (error: any) {
+      return handleApiError(error);
+    }
+  });
+};
+
+export const generateHeroImage = async (prompt: string): Promise<string> => {
+  return withRetry(async () => {
+    try {
+        const ai = createAIInstance();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }] },
+            config: { imageConfig: { aspectRatio: "16:9" } }
+        });
+        for (const part of response.candidates[0].content.parts) if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+        throw new Error("No image.");
+    } catch (error) { return handleApiError(error); }
+  });
+};
+
+export const generateHeroVideo = async (prompt: string): Promise<string> => {
+    return withRetry(async () => {
+        try {
+            const ai = createAIInstance();
+            let op = await ai.models.generateVideos({
+              model: 'veo-3.1-fast-generate-preview',
+              prompt,
+              config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' }
+            });
+            
+            while (!op.done) {
+              await new Promise(r => setTimeout(r, 10000));
+              try {
+                const refreshAi = createAIInstance();
+                op = await refreshAi.operations.getVideosOperation({operation: op});
+              } catch (pollError) {
+                  // Ignore transient poll errors to prevent killing long-running jobs
+                  console.warn("Polling error encountered, retrying next cycle...", pollError);
+              }
+            }
+            
+            const link = op.response?.generatedVideos?.[0]?.video?.uri;
+            if (!link) throw new Error("Video generation failed or blocked by filters.");
+            
+            const apiKey = (process.env.API_KEY || "").trim();
+            const downloadUrl = link.includes('?') 
+                ? `${link}&key=${encodeURIComponent(apiKey)}` 
+                : `${link}?key=${encodeURIComponent(apiKey)}`;
+            
+            const res = await fetch(downloadUrl);
+            if (!res.ok) {
+                if (res.status === 400 || res.status === 403) throw new Error("INVALID_KEY_OR_PROJECT");
+                throw new Error(`Download failed: HTTP ${res.status}`);
+            }
+
+            const blob = await res.blob();
+            return URL.createObjectURL(blob);
+        } catch (error: any) {
+            throw handleApiError(error);
+        }
+    });
+};
+
+export const getAIEstimate = async (data: EstimateFormData) => {
+  return withRetry(async () => {
+    try {
+      const ai = createAIInstance();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Research current local roofing material prices and provide a replacement cost estimate for a ${data.stories} home with a ${data.roofType} roof, approximately ${data.sqft} sqft, in zip code ${data.zipCode}. Include local labor trends.`,
+        config: {
+          responseMimeType: "application/json",
+          tools: [{ googleSearch: {} }],
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              lowEstimate: { type: Type.NUMBER },
+              highEstimate: { type: Type.NUMBER },
+              explanation: { type: Type.STRING }
+            },
+            required: ["lowEstimate", "highEstimate", "explanation"]
+          }
+        }
+      });
+      return JSON.parse(response.text || "{}");
+    } catch (error: any) {
+      return handleApiError(error);
+    }
+  });
+};
+
+export const analyzeRoofImage = async (file: File): Promise<string> => {
+  return withRetry(async () => {
+    try {
+      const ai = createAIInstance();
+      const base64Data = await fileToBase64(file);
+      const data = base64Data.split(',')[1];
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{
+          parts: [
+            { text: "Analyze this roof for damage, age, and material condition. Provide a summary of issues found in markdown format." },
+            { inlineData: { mimeType: file.type, data: data } }
+          ]
+        }]
+      });
+      return response.text || "No analysis available.";
+    } catch (error: any) {
+      return handleApiError(error);
+    }
+  });
+};
+
+export const analyzeRoofVideo = async (file: File): Promise<string> => {
+  return analyzeRoofImage(file);
+};
 
 export function createBlob(data: Float32Array): GenAIBlob {
   const l = data.length;

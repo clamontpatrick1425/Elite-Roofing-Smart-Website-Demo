@@ -242,11 +242,11 @@ const Header: React.FC<HeaderProps> = ({ onFaqClick, onEstimateClick, onDamageAs
               </nav>
                <button
                   onClick={onVoiceAgentClick}
-                  title="Activate Voice Agent"
+                  title="Activate Hannah"
                   className="ml-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 text-sm"
                 >
                   <MicrophoneIcon className="w-5 h-5" />
-                  <span>AI Voice</span>
+                  <span>Speak With Hannah</span>
               </button>
               <div className="ml-2">
                 <ThemeToggle />
@@ -298,7 +298,7 @@ const Header: React.FC<HeaderProps> = ({ onFaqClick, onEstimateClick, onDamageAs
                     className="w-full flex justify-center items-center gap-2 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
                 >
                     <MicrophoneIcon className="w-5 h-5" />
-                    <span>Activate AI Voice</span>
+                    <span>Speak With Hannah</span>
                 </button>
             </div>
           </div>

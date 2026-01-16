@@ -7,7 +7,6 @@ declare global {
   }
 }
 
-// Helper function to decode base64 string to Uint8Array
 function decode(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -18,7 +17,6 @@ function decode(base64: string): Uint8Array {
   return bytes;
 }
 
-// Custom function to decode raw PCM audio data into an AudioBuffer
 async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
@@ -45,7 +43,6 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
     const outputAudioContextRef = useRef<AudioContext | null>(null);
     const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-    // Fix: Add a ref to hold the MediaStream object.
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const playbackQueueRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const nextStartTimeRef = useRef<number>(0);
@@ -53,46 +50,24 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
     const startProcessing = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // Fix: Store the stream in the ref.
             mediaStreamRef.current = stream;
             
-            // Input context (16k required for Gemini Live input)
-            // Use try/catch because some browsers/hardware may not support 16k directly
-            let inputContext;
-            try {
-                inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-            } catch (e) {
-                console.warn("Could not create 16k AudioContext, falling back to default sample rate.", e);
-                inputContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            // Explicitly resume context to prevent "suspended" state issues
+            const inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             if (inputContext.state === 'suspended') {
-                await inputContext.resume().catch(e => console.warn("Failed to resume input context", e));
+                await inputContext.resume();
             }
             inputAudioContextRef.current = inputContext;
 
-            // Output context (24k required for Gemini Live output)
-            let outputContext;
-            try {
-                outputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-            } catch (e) {
-                console.warn("Could not create 24k AudioContext for output, using default.", e);
-                outputContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            // Explicitly resume context to prevent "suspended" state issues
+            const outputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
             if (outputContext.state === 'suspended') {
-                await outputContext.resume().catch(e => console.warn("Failed to resume output context", e));
+                await outputContext.resume();
             }
             outputAudioContextRef.current = outputContext;
             nextStartTimeRef.current = outputContext.currentTime;
 
-
             const source = inputContext.createMediaStreamSource(stream);
             mediaStreamSourceRef.current = source;
 
-            // Use 4096 buffer size for balance between latency and performance
             const scriptProcessor = inputContext.createScriptProcessor(4096, 1, 1);
             scriptProcessorRef.current = scriptProcessor;
 
@@ -106,13 +81,8 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
             
             setIsProcessing(true);
         } catch (error) {
-            console.error("Error starting audio processing:", error);
-            // Ensure cleanup happens if partial initialization occurred
-            if (inputAudioContextRef.current) inputAudioContextRef.current.close();
-            if (outputAudioContextRef.current) outputAudioContextRef.current.close();
-            if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
-            
-            throw error; // Propagate error to be caught by caller
+            console.error("Error starting audio processor:", error);
+            throw error;
         }
     }, [onAudioData]);
 
@@ -122,14 +92,12 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
             for (const source of playbackQueue) {
                 try {
                     source.stop();
-                } catch(e) { /* ignore already stopped */ }
+                } catch(e) {}
             }
             playbackQueue.clear();
         }
         if (outputAudioContextRef.current) {
             nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
-        } else {
-            nextStartTimeRef.current = 0;
         }
     }, []);
 
@@ -162,42 +130,33 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
               playbackQueue.delete(source);
             };
         } catch (error) {
-            console.error("Error playing audio:", error);
+            console.error("Error playing Live API audio chunk:", error);
         }
     }, []);
 
     const stopProcessing = useCallback(() => {
-        // Always attempt cleanup even if isProcessing is false to ensure clean state
-        
-        // Stop microphone input processing
         if (scriptProcessorRef.current) {
             scriptProcessorRef.current.disconnect();
             scriptProcessorRef.current.onaudioprocess = null;
             scriptProcessorRef.current = null;
         }
-        
         if (mediaStreamSourceRef.current) {
             mediaStreamSourceRef.current.disconnect();
             mediaStreamSourceRef.current = null;
         }
-
         if (mediaStreamRef.current) {
-            mediaStreamRef.current.getTracks().forEach(track => track.stop());
+            mediaStreamRef.current.getTracks().forEach(t => t.stop());
             mediaStreamRef.current = null;
         }
-        
-        if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+        if (inputAudioContextRef.current) {
             inputAudioContextRef.current.close().catch(console.error);
             inputAudioContextRef.current = null;
         }
-
-        // Stop any ongoing playback and close output context
         interruptPlayback();
-        if (outputAudioContextRef.current && outputAudioContextRef.current.state !== 'closed') {
+        if (outputAudioContextRef.current) {
             outputAudioContextRef.current.close().catch(console.error);
             outputAudioContextRef.current = null;
         }
-        
         setIsProcessing(false);
     }, [interruptPlayback]);
     
