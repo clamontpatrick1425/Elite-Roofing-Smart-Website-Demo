@@ -3,6 +3,7 @@ import { CHATBOT_SYSTEM_INSTRUCTION } from '../constants';
 import { EstimateFormData } from '../types';
 
 // Helper to initialize AI instance with the provided API key.
+// Guidelines: Create a new instance right before making an API call.
 const createAIInstance = () => {
   const apiKey = (process.env.API_KEY || "").trim();
   if (!apiKey) {
@@ -54,7 +55,7 @@ const getChatSession = (ai: GoogleGenAI) => {
 };
 
 // Centralized error handling for Gemini API responses.
-const handleApiError = (error: any) => {
+export const handleApiError = (error: any) => {
   let message = "An unexpected error occurred.";
   let status = "N/A";
   let fullLog = "";
@@ -81,6 +82,12 @@ const handleApiError = (error: any) => {
   console.error(`Gemini API Error Detail: ${message}`);
   const errorStr = (fullLog + " " + message).toLowerCase();
 
+  // Handling key selection race conditions or project mismatches (Billing Required)
+  if (errorStr.includes("requested entity was not found") || errorStr.includes("api key not found")) {
+      resetChatSession();
+      throw new Error("ENTITY_NOT_FOUND");
+  }
+
   // Handle Transient Errors (Retriable)
   if (status === "503" || status === "504" || errorStr.includes("deadline expired") || errorStr.includes("deadline exceeded") || errorStr.includes("unavailable")) {
       throw new Error("TRANSIENT_ERROR");
@@ -93,7 +100,7 @@ const handleApiError = (error: any) => {
   }
   
   // Handle Authentication and Permission Issues
-  if (status === "400" || status === "401" || status === "403" || errorStr.includes("expired") || errorStr.includes("not found") || errorStr.includes("invalid") || errorStr.includes("requested entity was not found") || errorStr.includes("api key not found")) {
+  if (status === "400" || status === "401" || status === "403" || errorStr.includes("expired") || errorStr.includes("invalid")) {
     resetChatSession();
     throw new Error("INVALID_KEY_OR_PROJECT");
   }
@@ -106,7 +113,8 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Pr
   try {
     return await fn();
   } catch (error: any) {
-    if (retries > 0 && (error.message === "QUOTA_EXHAUSTED" || error.message === "TRANSIENT_ERROR")) {
+    const isRetryable = error.message === "QUOTA_EXHAUSTED" || error.message === "TRANSIENT_ERROR";
+    if (retries > 0 && isRetryable) {
       console.log(`Retrying API call (${retries} retries left)...`);
       await new Promise(r => setTimeout(r, delay));
       return withRetry(fn, retries - 1, delay * 2);
@@ -229,9 +237,10 @@ export const generateHeroImage = async (prompt: string): Promise<string> => {
 };
 
 export const generateHeroVideo = async (prompt: string): Promise<string> => {
+    // Note: We create fresh AI instances during polling to ensure current keys are used.
     return withRetry(async () => {
         try {
-            const ai = createAIInstance();
+            let ai = createAIInstance();
             let op = await ai.models.generateVideos({
               model: 'veo-3.1-fast-generate-preview',
               prompt,
@@ -241,16 +250,21 @@ export const generateHeroVideo = async (prompt: string): Promise<string> => {
             while (!op.done) {
               await new Promise(r => setTimeout(r, 10000));
               try {
-                const refreshAi = createAIInstance();
-                op = await refreshAi.operations.getVideosOperation({operation: op});
-              } catch (pollError) {
-                  // Ignore transient poll errors to prevent killing long-running jobs
-                  console.warn("Polling error encountered, retrying next cycle...", pollError);
+                // Fresh instance for every poll to avoid stale session issues
+                ai = createAIInstance();
+                op = await ai.operations.getVideosOperation({operation: op});
+              } catch (pollError: any) {
+                  const pollMsg = String(pollError).toLowerCase();
+                  if (pollMsg.includes("unavailable") || pollMsg.includes("503") || pollMsg.includes("deadline")) {
+                      console.warn("Transient poll error, continuing...");
+                      continue;
+                  }
+                  throw pollError;
               }
             }
             
             const link = op.response?.generatedVideos?.[0]?.video?.uri;
-            if (!link) throw new Error("Video generation failed or blocked by filters.");
+            if (!link) throw new Error("Video generation failed. This project may lack Generative AI Video permissions or region support.");
             
             const apiKey = (process.env.API_KEY || "").trim();
             const downloadUrl = link.includes('?') 
@@ -259,6 +273,8 @@ export const generateHeroVideo = async (prompt: string): Promise<string> => {
             
             const res = await fetch(downloadUrl);
             if (!res.ok) {
+                const errText = await res.text();
+                console.error("Video Download Body:", errText);
                 if (res.status === 400 || res.status === 403) throw new Error("INVALID_KEY_OR_PROJECT");
                 throw new Error(`Download failed: HTTP ${res.status}`);
             }

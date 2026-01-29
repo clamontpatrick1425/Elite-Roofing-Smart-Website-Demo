@@ -149,3 +149,95 @@ export const FAQ_DATA: FAQCategory[] = [
     ],
   },
 ];
+
+export const WEBSITE_AUDIT_HTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Growth Audit | Midwest Roofing Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; color: #1f2937; }
+        .page { background: white; max-width: 850px; margin: 40px auto; padding: 60px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 8px; }
+        h1 { color: #1e40af; }
+        h2 { border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; margin-bottom: 16px; color: #1e3a8a; }
+        .grade { font-size: 4rem; font-weight: 800; color: #dc2626; }
+        .highlight { background-color: #fef3c7; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="page">
+        <div class="flex justify-between items-start mb-12">
+            <div>
+                <h1 class="text-4xl font-black uppercase tracking-tight">Website Growth Audit</h1>
+                <p class="text-xl text-gray-500 mt-2">Prepared for: <span class="font-bold text-gray-900">The Midwest Roofing Team</span></p>
+                <p class="text-lg text-blue-600 font-medium">Focus: Turning website visitors into booked roofing jobs.</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold text-gray-400 uppercase">Audit Grade</p>
+                <div class="grade">C+</div>
+            </div>
+        </div>
+
+        <section>
+            <h2>1) Executive Summary (The "So What")</h2>
+            <p class="text-lg leading-relaxed mb-4">
+                Your website looks professional and established, but it acts more like a static brochure than a high-performing salesperson. It tells people who you are, but it doesn't do enough to <strong>convince them to call you right now.</strong>
+            </p>
+            <h3 class="font-bold text-xl mt-6 mb-3">Top 3 things hurting your leads right now:</h3>
+            <ul class="list-decimal list-inside space-y-4 text-gray-700">
+                <li><span class="font-bold">Passive Language:</span> The site waits for people to find the "Contact" page rather than guiding them there.</li>
+                <li><span class="font-bold">Mobile Friction:</span> It's a bit difficult to "click-to-call" or fill out a form quickly on a smartphone.</li>
+                <li><span class="font-bold">Local "Invisibility":</span> You aren't claiming enough territory in specific Kansas towns through your website's text.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2) First Impression & Clarity</h2>
+            <div class="bg-blue-50 p-6 rounded-xl border-l-4 border-blue-600 mb-6">
+                <p class="font-bold text-blue-900">The 5-Second Test:</p>
+                <p class="text-blue-800 italic">"A visitor knows you do roofing immediately. However, they don't immediately see why they should choose you over the next guy."</p>
+            </div>
+            <ul class="space-y-4">
+                <li><span class="font-bold">Main Call-to-Action:</span> Currently, it's a bit "quiet." We need a loud, clear invitation to start a project.</li>
+                <li><span class="font-bold">Trust Signals:</span> You have a great BBB rating, but we need to see more "social proof" (customer faces or local house photos) right on the front page.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3) Recommendations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="font-bold text-blue-600 mb-2">1. Change Headline</p>
+                    <p class="text-sm">Use: "Reliable Roofing for Kansas Homeowners – Free Estimates & Quality Workmanship."</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="font-bold text-blue-600 mb-2">2. Move Phone Number</p>
+                    <p class="text-sm">Put your phone number in a large, bold font at the very top right.</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="font-bold text-blue-600 mb-2">3. Add "Why Us" Row</p>
+                    <p class="text-sm">Icons for: Fully Insured, A+ BBB Rating, and Local Family Owned.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>4) Performance & Usability</h2>
+            <p class="mb-4">Mobile Experience Score: <span class="font-bold text-orange-600">6/10</span></p>
+            <div class="space-y-3 text-gray-600">
+                <p>• <strong>Sticky Header:</strong> Keep the "Call Now" button at the top as they scroll.</p>
+                <p>• <strong>Thumb-Friendly Buttons:</strong> Make all buttons at least 44 pixels tall.</p>
+                <p>• <strong>Text-to-Quote:</strong> Add a button that lets them text you a photo of their roof damage.</p>
+            </div>
+        </section>
+
+        <div class="mt-20 pt-10 border-t border-gray-100 text-center text-gray-400 text-sm">
+            Audit by Calvin Patrick, Website Growth Specialist | &copy; 2025
+        </div>
+    </div>
+</body>
+</html>
+`;

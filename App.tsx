@@ -17,10 +17,12 @@ import LeadCaptureForm from './components/LeadCaptureForm';
 import AboutUsModal from './components/AboutUsModal';
 import GalleryModal from './components/GalleryModal';
 import ProjectVisualizerModal from './components/ProjectVisualizerModal';
+import VeoStudioModal from './components/VeoStudioModal';
 import { GalleryImage } from './types';
 import { VoiceAgentHandle } from './components/VoiceAgentOrb';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import ServiceAreaValidator from './components/ServiceAreaValidator';
+import { WEBSITE_AUDIT_HTML } from './constants';
 
 const App: React.FC = () => {
   const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
@@ -28,6 +30,7 @@ const App: React.FC = () => {
   const [isDamageAssessorModalOpen, setIsDamageAssessorModalOpen] = useState(false);
   const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
   const [isVisualizerModalOpen, setIsVisualizerModalOpen] = useState(false);
+  const [isDesignStudioModalOpen, setIsDesignStudioModalOpen] = useState(false);
   const [isLeadCaptureModalOpen, setIsLeadCaptureModalOpen] = useState(false);
   const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
@@ -39,6 +42,7 @@ const App: React.FC = () => {
     setIsDamageAssessorModalOpen(false);
     setIsEstimateModalOpen(false);
     setIsVisualizerModalOpen(false);
+    setIsDesignStudioModalOpen(false);
     setIsSchedulerModalOpen(true);
   };
 
@@ -55,6 +59,13 @@ const App: React.FC = () => {
     voiceAgentRef.current?.activate();
   };
 
+  const handleOpenAudit = () => {
+      const blob = new Blob([WEBSITE_AUDIT_HTML], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
   return (
     <div className="relative font-sans text-gray-900 dark:text-gray-100">
       <Header
@@ -66,9 +77,11 @@ const App: React.FC = () => {
         onContactClick={openLeadCaptureModal}
         onGalleryItemClick={handleOpenGalleryModal}
         onVoiceAgentClick={handleActivateVoiceAgent}
+        onAuditClick={handleOpenAudit}
+        onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
       />
       
-      <main className="flex flex-col">
+      <main className="flex flex-col pt-20 md:pt-24">
         <Hero 
           onScheduleClick={openSchedulerModal} 
           onEstimateClick={openEstimateModal}
@@ -81,6 +94,7 @@ const App: React.FC = () => {
           onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
           onEstimateClick={openEstimateModal}
           onVisualizerClick={() => setIsVisualizerModalOpen(true)}
+          onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
         />
         
         <WhyChooseUs />
@@ -113,6 +127,8 @@ const App: React.FC = () => {
       <AIHub 
         onOpenEstimate={openEstimateModal} 
         onOpenDamageAssessor={() => setIsDamageAssessorModalOpen(true)} 
+        onOpenVisualizer={() => setIsVisualizerModalOpen(true)}
+        onOpenDesignStudio={() => setIsDesignStudioModalOpen(true)}
       />
       
       {/* Modals */}
@@ -131,6 +147,10 @@ const App: React.FC = () => {
       <ProjectVisualizerModal 
         isOpen={isVisualizerModalOpen} 
         onClose={() => setIsVisualizerModalOpen(false)} 
+      />
+      <VeoStudioModal
+        isOpen={isDesignStudioModalOpen}
+        onClose={() => setIsDesignStudioModalOpen(false)}
       />
       <LeadCaptureModal isOpen={isLeadCaptureModalOpen} onClose={() => setIsLeadCaptureModalOpen(false)} />
       <AboutUsModal isOpen={isAboutUsModalOpen} onClose={() => setIsAboutUsModalOpen(false)} />

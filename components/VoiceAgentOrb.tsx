@@ -1,11 +1,10 @@
-
 import React, { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { MicrophoneIcon, XMarkIcon, SpeakerWaveIcon } from './Icon';
+import { MicrophoneIcon, XMarkIcon, SpeakerWaveIcon, ArrowPathIcon } from './Icon';
 import { useAudioProcessor } from '../hooks/useAudioProcessor';
-import { createBlob } from '../services/geminiService';
+import { createBlob, handleApiError } from '../services/geminiService';
 
-type AgentStatus = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
+type AgentStatus = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking' | 'error';
 type Transcription = { speaker: 'user' | 'model' | 'tool_call'; text: string };
 
 export type VoiceAgentHandle = {
@@ -13,10 +12,15 @@ export type VoiceAgentHandle = {
 };
 
 const TranscriptionDisplay: React.FC<{ history: Transcription[], currentInput: string, currentOutput: string }> = ({ history, currentInput, currentOutput }) => (
-    <div className="fixed bottom-24 right-5 z-40 w-full max-w-sm h-auto max-h-[50vh] bg-gray-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl flex flex-col text-white font-sans text-xs border border-white/10 animate-fade-in-up">
+    <div 
+        className="fixed bottom-24 right-5 z-40 w-full max-w-sm h-auto max-h-[50vh] bg-gray-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl flex flex-col text-white font-sans text-xs border border-white/10 animate-fade-in-up"
+        role="log"
+        aria-live="polite"
+        aria-label="Assistant Transcript History"
+    >
         <div className="p-3 border-b border-white/10 flex items-center justify-between">
             <h4 className="font-bold uppercase tracking-widest text-[10px] opacity-70">Live Assistant Transcript</h4>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" aria-hidden="true">
                 <span className="text-[10px] opacity-50">Live</span>
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             </div>
@@ -25,6 +29,7 @@ const TranscriptionDisplay: React.FC<{ history: Transcription[], currentInput: s
             {history.map((t, i) => (
                 <div key={i} className={`flex flex-col ${t.speaker === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`max-w-[90%] p-2 rounded-xl ${t.speaker === 'user' ? 'bg-blue-600 rounded-tr-none' : 'bg-gray-700 rounded-tl-none'}`}>
+                        <span className="sr-only">{t.speaker === 'user' ? 'You:' : 'Hannah:'}</span>
                         <p className="leading-relaxed">{t.text}</p>
                     </div>
                 </div>
@@ -46,6 +51,7 @@ const VoiceAgentOrb = forwardRef<VoiceAgentHandle, {}>((props, ref) => {
     const [uiInputTranscription, setUiInputTranscription] = useState('');
     const [uiOutputTranscription, setUiOutputTranscription] = useState('');
     const [transcriptionHistory, setTranscriptionHistory] = useState<Transcription[]>([]);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
     
     const inputBufferRef = useRef('');
     const outputBufferRef = useRef('');
@@ -75,14 +81,19 @@ const VoiceAgentOrb = forwardRef<VoiceAgentHandle, {}>((props, ref) => {
         outputBufferRef.current = '';
         setUiInputTranscription('');
         setUiOutputTranscription('');
+        setErrorMsg(null);
     }, [stopProcessing]);
 
     const startSession = async () => {
         try {
+            setErrorMsg(null);
             setStatus('connecting');
             setIsActive(true);
+            
             const aistudio = (window as any).aistudio;
-            if (aistudio && !(await aistudio.hasSelectedApiKey())) await aistudio.openSelectKey();
+            if (aistudio && !(await aistudio.hasSelectedApiKey())) {
+                await aistudio.openSelectKey();
+            }
 
             const micStreamPromise = startProcessing();
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -109,13 +120,25 @@ const VoiceAgentOrb = forwardRef<VoiceAgentHandle, {}>((props, ref) => {
                         }
                         if (message.serverContent?.interrupted) interruptPlayback();
                         if (message.serverContent?.turnComplete) {
-                            setTranscriptionHistory(prev => [...prev, { speaker: 'user', text: inputBufferRef.current }, { speaker: 'model', text: outputBufferRef.current }].filter(t => t.text));
+                            // Fix: Added 'as const' to string literals for speaker to match the Transcription type definition
+                            setTranscriptionHistory(prev => [...prev, { speaker: 'user' as const, text: inputBufferRef.current }, { speaker: 'model' as const, text: outputBufferRef.current }].filter(t => t.text));
                             inputBufferRef.current = ''; outputBufferRef.current = ''; setUiInputTranscription(''); setUiOutputTranscription('');
                             setStatus('listening');
                         }
                     },
-                    onerror: (e) => { console.error("Live API Error:", e); endSession(); },
-                    onclose: () => endSession(),
+                    onerror: (e: any) => { 
+                        console.error("Live Assistant API Error:", e);
+                        const msg = String(e).toLowerCase();
+                        if (msg.includes("entity was not found") || msg.includes("api key not found")) {
+                            setErrorMsg("Billing Required: Please use a key from a PAID Google Cloud project.");
+                        } else {
+                            setErrorMsg("Assistant connection failed. Check your network.");
+                        }
+                        setStatus('error');
+                    },
+                    onclose: () => {
+                        if (status !== 'error') endSession();
+                    },
                 },
                 config: {
                     responseModalities: [Modality.AUDIO],
@@ -132,34 +155,84 @@ const VoiceAgentOrb = forwardRef<VoiceAgentHandle, {}>((props, ref) => {
                 },
             });
             await micStreamPromise;
-        } catch (error) { endSession(); }
+        } catch (error) { 
+            console.error("Assistant Start Error:", error);
+            setErrorMsg("Microphone permission denied or connection timed out.");
+            setStatus('error');
+        }
     };
 
     const toggleSession = () => isActive ? endSession() : startSession();
     useImperativeHandle(ref, () => ({ activate: () => { if (!isActive) startSession(); } }));
 
+    const handleReconfigure = async () => {
+        const aistudio = (window as any).aistudio;
+        if (aistudio) {
+            await aistudio.openSelectKey();
+            endSession();
+        }
+    };
+
     return (
        <>
-        {isActive && <TranscriptionDisplay history={transcriptionHistory} currentInput={uiInputTranscription} currentOutput={uiOutputTranscription} />}
+        {isActive && status !== 'error' && <TranscriptionDisplay history={transcriptionHistory} currentInput={uiInputTranscription} currentOutput={uiOutputTranscription} />}
+        
         <div className="flex flex-col items-center gap-4">
             <button 
                 onClick={toggleSession} 
-                className={`relative text-white rounded-full p-8 h-40 w-40 flex items-center justify-center shadow-2xl transition-all duration-700 transform hover:scale-110 ${isActive ? 'bg-blue-600 ring-4 ring-blue-400 ring-opacity-50 animate-pulse' : 'bg-gray-800 hover:bg-gray-700'}`}
+                aria-label={isActive ? `Disconnect Hannah Assistant (Status: ${status})` : 'Call Hannah AI Assistant'}
+                aria-pressed={isActive}
+                className={`relative text-white rounded-full p-8 h-40 w-40 flex items-center justify-center shadow-2xl transition-all duration-700 transform hover:scale-110 focus-visible:ring-4 focus-visible:ring-blue-400 focus-visible:ring-offset-4 ${isActive ? (status === 'error' ? 'bg-red-600' : 'bg-blue-600 ring-4 ring-blue-400 ring-opacity-50 animate-pulse') : 'bg-gray-800 hover:bg-gray-700 animate-orb-pulsate'}`}
             >
-                <div className={`z-10 transition-transform duration-500 ${status === 'speaking' ? 'scale-125' : 'scale-100'}`}>
-                    {status === 'speaking' ? <SpeakerWaveIcon className="w-24 h-24" /> : <MicrophoneIcon className={`w-24 h-24 ${status === 'connecting' ? 'animate-bounce opacity-50' : ''}`} />}
+                <div className={`z-10 transition-transform duration-500 ${status === 'speaking' ? 'scale-125' : 'scale-100'}`} aria-hidden="true">
+                    {status === 'speaking' ? <SpeakerWaveIcon className="w-24 h-24" /> : (status === 'error' ? <XMarkIcon className="w-24 h-24" /> : <MicrophoneIcon className={`w-24 h-24 ${status === 'connecting' ? 'animate-bounce opacity-50' : ''}`} />)}
                 </div>
-                {status === 'speaking' && <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 animate-ping"></div>}
-                <div className="absolute -bottom-12 text-[11px] font-black uppercase tracking-[0.2em] text-gray-500 whitespace-nowrap">
-                    {isActive ? status : 'SPEAK WITH HANNAH'}
+                {status === 'speaking' && <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 animate-ping" aria-hidden="true"></div>}
+                <div 
+                    className={`absolute -bottom-12 text-[11px] font-black uppercase tracking-[0.2em] whitespace-nowrap ${status === 'error' ? 'text-red-500' : 'text-gray-500'}`}
+                    aria-live="polite"
+                >
+                    {isActive ? status : 'Speak with Hannah'}
                 </div>
             </button>
-            {isActive && (
-                <button onClick={endSession} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-bold py-1 px-4 rounded-full border border-red-500/20 transition-all flex items-center gap-2">
+
+            {status === 'error' && (
+                <div className="flex flex-col items-center gap-3 animate-fade-in-up mt-16 max-w-[200px] text-center" role="alert" aria-live="assertive">
+                    <p className="text-[10px] font-bold text-red-600 leading-tight">{errorMsg}</p>
+                    <button 
+                        onClick={handleReconfigure}
+                        className="flex items-center gap-2 bg-white text-red-600 text-[10px] font-black py-2 px-4 rounded-full shadow-lg hover:bg-gray-50 transition-all focus-visible:ring-2 focus-visible:ring-red-500"
+                    >
+                        <ArrowPathIcon className="w-3 h-3" /> RECONFIGURE KEY
+                    </button>
+                    <button 
+                        onClick={endSession} 
+                        className="text-[9px] font-bold text-gray-500 underline hover:text-gray-700 focus-visible:text-gray-900"
+                    >
+                        DISMISS
+                    </button>
+                </div>
+            )}
+
+            {isActive && status !== 'error' && (
+                <button 
+                    onClick={endSession} 
+                    className="bg-red-500/10 hover:bg-red-500/20 text-red-600 text-[10px] font-bold py-1 px-4 rounded-full border border-red-500/20 transition-all flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-red-500"
+                >
                     <XMarkIcon className="w-3 h-3" /> DISCONNECT
                 </button>
             )}
         </div>
+        <style>{`
+            @keyframes orb-pulsate {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(31, 41, 55, 0.4), 0 10px 30px rgba(0,0,0,0.3); }
+                50% { transform: scale(1.15); box-shadow: 0 0 0 35px rgba(31, 41, 55, 0), 0 20px 60px rgba(0,0,0,0.5); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(31, 41, 55, 0), 0 10px 30px rgba(0,0,0,0.3); }
+            }
+            .animate-orb-pulsate {
+                animation: orb-pulsate 2s infinite ease-in-out;
+            }
+        `}</style>
        </>
     );
 });
