@@ -11,13 +11,13 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgentRef }) => {
-  // Using a robust fallback video for the background
-  const FALLBACK_VIDEO = "https://cdn.pixabay.com/vimeo/327341901/roof-22668.mp4?width=1280&hash=8885b56501725b7a13c49e790a8a68869c9b6f84";
+  // A high-quality, stable cinematic roofing video source for production
+  const PERMANENT_CINEMATIC_VIDEO = "https://assets.mixkit.co/videos/preview/mixkit-modern-house-with-dark-shingles-in-the-forest-43180-large.mp4";
   const HERO_IMAGE = 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2';
   
   const CINEMATIC_PROMPT = "Cinematic wide shot of two professional roofers in high-visibility safety gear expertly installing premium slate tiles on a modern luxury mansion. Golden hour lighting with soft sun flares. Smooth drone tracking shot moving slowly across the roofline. 4k resolution, highly detailed textures, professional architectural videography.";
 
-  const [videoUrl, setVideoUrl] = useState(FALLBACK_VIDEO);
+  const [videoUrl, setVideoUrl] = useState(PERMANENT_CINEMATIC_VIDEO);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -26,23 +26,24 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
 
   const attemptAiGeneration = async () => {
     const aistudio = (window as any).aistudio;
+    // We only attempt auto-generation if the key is already present/selected
     if (aistudio && await aistudio.hasSelectedApiKey()) {
         setIsGenerating(true);
         setGenError(null);
         try {
-            console.log("Generating custom cinematic hero video...");
             const url = await generateHeroVideo(CINEMATIC_PROMPT);
             setVideoUrl(url);
             setIsAiGenerated(true);
-            setIsVideoLoaded(false); // Reset to allow transition animation
+            setIsVideoLoaded(false); 
         } catch (e: any) {
             console.warn("Hero AI Generation failed:", e);
             if (e.message === "VIDEO_NOT_SUPPORTED") {
-                setGenError("AI Video not available in this region.");
+                setGenError("AI Render requires a paid project key.");
             } else {
-                setGenError("AI Render failed. Check API key settings.");
+                setGenError("AI Render failed. Using premium background.");
             }
-            setVideoUrl(FALLBACK_VIDEO);
+            // Keep using the permanent video on failure
+            setVideoUrl(PERMANENT_CINEMATIC_VIDEO);
         } finally {
             setIsGenerating(false);
         }
@@ -54,10 +55,9 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   }, []);
 
   const handleLoadedData = () => {
-    console.log("Video data loaded successfully:", videoUrl);
     setIsVideoLoaded(true);
     if (videoRef.current) {
-        videoRef.current.play().catch(e => console.error("Autoplay attempt failed:", e));
+        videoRef.current.play().catch(e => console.error("Autoplay failed:", e));
     }
   };
 
@@ -69,22 +69,17 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
     }
   };
 
-  const handleModalClick = (e: React.MouseEvent<HTMLAnchorElement>, handler: () => void) => {
-    e.preventDefault();
-    handler();
-  };
-
   return (
     <section className="relative bg-gray-900 text-white py-20 sm:py-24 md:py-32 min-h-[700px] sm:min-h-[800px] flex items-center overflow-hidden">
       {/* Background Layers */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          {/* Static Background Image */}
+          {/* Static Background Image Fallback */}
           <div
               className="absolute inset-0 bg-cover bg-center z-0"
               style={{ backgroundImage: `url('${HERO_IMAGE}')` }}
           ></div>
 
-          {/* Background Video */}
+          {/* Background Video - Optimized for background usage */}
           <video 
             key={videoUrl}
             ref={videoRef}
@@ -95,12 +90,12 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
             playsInline
             onLoadedData={handleLoadedData}
             poster={HERO_IMAGE}
-            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-20'}`}
           />
           
-          {/* Overlays */}
+          {/* Gradients and Overlays */}
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/40 to-gray-900/80 z-20"></div>
-          <div className="absolute inset-0 bg-black/5 z-20"></div>
+          <div className="absolute inset-0 bg-black/10 z-20"></div>
       </div>
       
       {/* Content Layer */}
@@ -116,35 +111,30 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
             {isGenerating && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-[10px] font-bold uppercase tracking-widest animate-pulse">
                     <ArrowPathIcon className="w-3 h-3 animate-spin" />
-                    AI Rendering Cinematic Background...
+                    Rendering Your AI Vision...
                 </div>
             )}
 
-            {genError && !isGenerating && (
-                <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-400/20 text-red-400 text-[10px] font-bold uppercase tracking-widest">
-                        <XMarkIcon className="w-3 h-3" />
-                        {genError}
-                    </div>
-                    <button 
-                        onClick={handleOpenSelectKey}
-                        className="text-[9px] text-blue-400 underline hover:text-blue-300 transition-colors uppercase font-black tracking-tighter"
-                    >
-                        Check Billing / Switch API Key
-                    </button>
-                </div>
+            {!isGenerating && !isAiGenerated && (
+                <button 
+                  onClick={handleOpenSelectKey}
+                  className="group flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
+                >
+                    <SparkleIcon className="w-3 h-3 group-hover:text-blue-400" />
+                    Enable AI Custom Background
+                </button>
             )}
 
             {isAiGenerated && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-400/20 text-green-300 text-[10px] font-bold uppercase tracking-widest animate-fade-in">
                     <SparkleIcon className="w-3 h-3" />
-                    AI Vision Active
+                    AI Cinematic Render Active
                 </div>
             )}
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] mb-8 tracking-tighter drop-shadow-2xl max-w-4xl text-white">
-            Built Local. Built to Last. <span className="text-blue-500">Built for You.</span>
+            Built Local. Built to Last. <br/> <span className="text-blue-500">Built for You.</span>
           </h1>
           
           <p className="text-lg md:text-2xl text-white/90 mb-12 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-lg">
@@ -152,26 +142,24 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
           </p>
           
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full sm:w-auto mb-20">
-            <a
-              href="#estimate"
-              onClick={(e) => handleModalClick(e, onEstimateClick)}
+            <button
+              onClick={onEstimateClick}
               className="w-full sm:w-auto bg-blue-600 text-white font-black py-5 px-12 rounded-2xl shadow-2xl hover:bg-blue-500 hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-1.5 text-xl min-w-[280px] flex items-center justify-center gap-3"
             >
               <SparkleIcon className="w-6 h-6" />
               Claim Your Free Quote
-            </a>
+            </button>
             
             <div className="hidden md:block">
                  <VoiceAgentOrb ref={voiceAgentRef} />
             </div>
 
-            <a
-              href="#schedule"
-              onClick={(e) => handleModalClick(e, onScheduleClick)}
+            <button
+              onClick={onScheduleClick}
               className="w-full sm:w-auto bg-white/10 backdrop-blur-md border-2 border-white/40 text-white font-bold py-5 px-12 rounded-2xl shadow-xl hover:bg-white hover:text-gray-900 transition-all duration-300 transform hover:-translate-y-1 text-xl min-w-[280px] flex items-center justify-center gap-3"
             >
               Book Inspection
-            </a>
+            </button>
           </div>
 
           {/* Trust Row */}
