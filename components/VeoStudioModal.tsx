@@ -1,6 +1,5 @@
 
 import React, { useState, useRef } from 'react';
-// Added VideoCameraIcon to imports to fix undefined error
 import { XMarkIcon, SparkleIcon, CameraIcon, ArrowPathIcon, VideoCameraIcon } from './Icon';
 import { generateHeroVideo } from '../services/geminiService';
 
@@ -35,22 +34,27 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
     setError(null);
     setVideoUrl(null);
 
+    const aistudio = (window as any).aistudio;
+    if (aistudio && !(await aistudio.hasSelectedApiKey())) {
+        await aistudio.openSelectKey();
+    }
+
     try {
-      // Note: If imagePreview is present, the prompt becomes optional but still useful.
-      // generateHeroVideo currently only takes a prompt in our geminiService implementation.
-      // If we wanted to pass an image, we'd need to modify that service. 
-      // For this implementation, we'll use the prompt provided by the user.
       const url = await generateHeroVideo(prompt);
       setVideoUrl(url);
     } catch (err: any) {
-      if (err.message === "ENTITY_NOT_FOUND" || err.message === "INVALID_KEY_OR_PROJECT") {
-          setError("Video generation requires a paid API key from a billable Google Cloud project.");
+      if (err.message === "ENTITY_NOT_FOUND" || err.message === "INVALID_KEY_OR_PROJECT" || err.message === "VIDEO_NOT_SUPPORTED") {
+          setError("Video generation requires a PAID API key from a billable Google Cloud project. Verify your project supports Generative AI Video and your region is allowed.");
       } else {
           setError(err.message || "Failed to generate cinematic video.");
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenBilling = () => {
+    window.open('https://ai.google.dev/gemini-api/docs/billing', '_blank');
   };
 
   if (!isOpen) return null;
@@ -107,30 +111,35 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
                     />
                 </div>
 
-                <button 
-                    onClick={handleGenerate}
-                    disabled={isLoading}
-                    className="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 text-lg"
-                >
-                    {isLoading ? (
-                        <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Processing...
-                        </>
-                    ) : (
-                        <>
-                            <SparkleIcon className="w-6 h-6" />
-                            Animate Vision
-                        </>
-                    )}
-                </button>
+                <div className="space-y-4">
+                    <button 
+                        onClick={handleGenerate}
+                        disabled={isLoading}
+                        className="w-full bg-blue-600 text-white font-bold py-5 rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 text-lg"
+                    >
+                        {isLoading ? (
+                            <>
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <SparkleIcon className="w-6 h-6" />
+                                Animate Vision
+                            </>
+                        )}
+                    </button>
+                    <p className="text-[10px] text-center text-gray-400">
+                        Veo requires a paid Gemini API key. <button onClick={handleOpenBilling} className="text-blue-500 underline font-bold">View Billing Requirements</button>
+                    </p>
+                </div>
             </div>
 
             {/* Output Column */}
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 flex items-center justify-center relative overflow-hidden shadow-2xl">
               {videoUrl ? (
                 <div className="w-full h-full animate-fade-in group">
-                  <video src={videoUrl} controls autoPlay loop className="w-full h-full object-cover" />
+                  <video src={videoUrl} controls autoPlay loop muted playsInline className="w-full h-full object-cover" />
                   <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
                     <SparkleIcon className="w-3 h-3" />
                     AI Cinematic Render
@@ -142,8 +151,8 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
                        <div className="flex flex-col items-center gap-8">
                             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                             <div className="space-y-2">
-                                <p className="font-bold text-lg text-blue-600 dark:text-blue-400">Generating Video (this may take a few minutes)...</p>
-                                <p className="text-sm text-gray-500">Hannah is working with AI to paint your dream project.</p>
+                                <p className="font-bold text-lg text-blue-600 dark:text-blue-400">Hannah is painting your dream project...</p>
+                                <p className="text-sm text-gray-500">This typically takes 20-60 seconds on the fast-preview model.</p>
                             </div>
                        </div>
                    ) : (
@@ -156,9 +165,16 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
               )}
               
               {error && (
-                <div className="absolute bottom-8 left-8 right-8 p-4 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-2xl text-red-600 dark:text-red-300 text-xs font-bold flex items-center gap-3 animate-fade-in">
-                    <XMarkIcon className="w-4 h-4 flex-shrink-0" />
-                    {error}
+                <div className="absolute bottom-8 left-8 right-8 p-6 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-2xl text-red-600 dark:text-red-300 text-sm font-bold flex flex-col gap-3 animate-fade-in shadow-xl">
+                    <div className="flex items-center gap-3">
+                        <XMarkIcon className="w-5 h-5 flex-shrink-0" />
+                        <span>Generation Failed</span>
+                    </div>
+                    <p className="font-normal text-xs opacity-90">{error}</p>
+                    <div className="flex gap-4 pt-2">
+                        <button onClick={handleGenerate} className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors">Retry</button>
+                        <button onClick={() => (window as any).aistudio?.openSelectKey()} className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-black transition-colors">Switch API Key</button>
+                    </div>
                 </div>
               )}
             </div>

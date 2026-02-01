@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import VoiceAgentOrb, { VoiceAgentHandle } from './VoiceAgentOrb';
-import { ShieldCheckIcon, UserCircleIcon, SparkleIcon, ArrowPathIcon } from './Icon';
+import { ShieldCheckIcon, UserCircleIcon, SparkleIcon, ArrowPathIcon, XMarkIcon } from './Icon';
 import { generateHeroVideo } from '../services/geminiService';
 
 interface HeroProps {
@@ -11,7 +11,8 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgentRef }) => {
-  const FALLBACK_VIDEO = "https://player.vimeo.com/external/434045526.sd.mp4?s=c27dc3699869559c73f1c6ca5e30d70f9cc6735c&profile_id=164&oauth2_token_id=57447761";
+  // Using a robust fallback video for the background
+  const FALLBACK_VIDEO = "https://cdn.pixabay.com/vimeo/327341901/roof-22668.mp4?width=1280&hash=8885b56501725b7a13c49e790a8a68869c9b6f84";
   const HERO_IMAGE = 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2';
   
   const CINEMATIC_PROMPT = "Cinematic wide shot of two professional roofers in high-visibility safety gear expertly installing premium slate tiles on a modern luxury mansion. Golden hour lighting with soft sun flares. Smooth drone tracking shot moving slowly across the roofline. 4k resolution, highly detailed textures, professional architectural videography.";
@@ -20,42 +21,53 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const attemptAiGeneration = async () => {
-        const aistudio = (window as any).aistudio;
-        if (aistudio && await aistudio.hasSelectedApiKey()) {
-            setIsGenerating(true);
-            try {
-                const url = await generateHeroVideo(CINEMATIC_PROMPT);
-                setVideoUrl(url);
-                setIsAiGenerated(true);
-            } catch (e) {
-                console.warn("Hero AI Generation skipped or failed, using fallback.", e);
-            } finally {
-                setIsGenerating(false);
+  const attemptAiGeneration = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio && await aistudio.hasSelectedApiKey()) {
+        setIsGenerating(true);
+        setGenError(null);
+        try {
+            console.log("Generating custom cinematic hero video...");
+            const url = await generateHeroVideo(CINEMATIC_PROMPT);
+            setVideoUrl(url);
+            setIsAiGenerated(true);
+            setIsVideoLoaded(false); // Reset to allow transition animation
+        } catch (e: any) {
+            console.warn("Hero AI Generation failed:", e);
+            if (e.message === "VIDEO_NOT_SUPPORTED") {
+                setGenError("AI Video not available in this region.");
+            } else {
+                setGenError("AI Render failed. Check API key settings.");
             }
+            setVideoUrl(FALLBACK_VIDEO);
+        } finally {
+            setIsGenerating(false);
         }
-    };
+    }
+  };
 
+  useEffect(() => {
     attemptAiGeneration();
   }, []);
 
-  useEffect(() => {
+  const handleLoadedData = () => {
+    console.log("Video data loaded successfully:", videoUrl);
+    setIsVideoLoaded(true);
     if (videoRef.current) {
-        const v = videoRef.current;
-        v.muted = true;
-        v.defaultMuted = true;
-        v.playsInline = true;
-
-        const handleReady = () => setIsVideoLoaded(true);
-        v.addEventListener('loadeddata', handleReady);
-        v.play().catch(() => {});
-
-        return () => v.removeEventListener('loadeddata', handleReady);
+        videoRef.current.play().catch(e => console.error("Autoplay attempt failed:", e));
     }
-  }, [videoUrl]);
+  };
+
+  const handleOpenSelectKey = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+        await aistudio.openSelectKey();
+        attemptAiGeneration();
+    }
+  };
 
   const handleModalClick = (e: React.MouseEvent<HTMLAnchorElement>, handler: () => void) => {
     e.preventDefault();
@@ -65,12 +77,14 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   return (
     <section className="relative bg-gray-900 text-white py-20 sm:py-24 md:py-32 min-h-[700px] sm:min-h-[800px] flex items-center overflow-hidden">
       {/* Background Layers */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          {/* Static Background Image */}
           <div
               className="absolute inset-0 bg-cover bg-center z-0"
               style={{ backgroundImage: `url('${HERO_IMAGE}')` }}
           ></div>
 
+          {/* Background Video */}
           <video 
             key={videoUrl}
             ref={videoRef}
@@ -79,12 +93,14 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
             loop 
             muted 
             playsInline
+            onLoadedData={handleLoadedData}
             poster={HERO_IMAGE}
-            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-[2000ms] ${isVideoLoaded ? 'opacity-100' : 'opacity-30'}`}
+            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
           
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900/90 via-gray-900/40 to-gray-900/90 z-20"></div>
-          <div className="absolute inset-0 bg-black/20 z-20"></div>
+          {/* Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/40 to-gray-900/80 z-20"></div>
+          <div className="absolute inset-0 bg-black/5 z-20"></div>
       </div>
       
       {/* Content Layer */}
@@ -104,10 +120,25 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
                 </div>
             )}
 
+            {genError && !isGenerating && (
+                <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-400/20 text-red-400 text-[10px] font-bold uppercase tracking-widest">
+                        <XMarkIcon className="w-3 h-3" />
+                        {genError}
+                    </div>
+                    <button 
+                        onClick={handleOpenSelectKey}
+                        className="text-[9px] text-blue-400 underline hover:text-blue-300 transition-colors uppercase font-black tracking-tighter"
+                    >
+                        Check Billing / Switch API Key
+                    </button>
+                </div>
+            )}
+
             {isAiGenerated && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-400/20 text-green-300 text-[10px] font-bold uppercase tracking-widest animate-fade-in">
                     <SparkleIcon className="w-3 h-3" />
-                    Custom AI Vision Loaded
+                    AI Vision Active
                 </div>
             )}
           </div>

@@ -1,9 +1,9 @@
+
 import { GoogleGenAI, Chat, Type, Blob as GenAIBlob, Modality, GenerateContentResponse } from "@google/genai";
 import { CHATBOT_SYSTEM_INSTRUCTION } from '../constants';
 import { EstimateFormData } from '../types';
 
 // Helper to initialize AI instance with the provided API key.
-// Guidelines: Create a new instance right before making an API call.
 const createAIInstance = () => {
   const apiKey = (process.env.API_KEY || "").trim();
   if (!apiKey) {
@@ -82,25 +82,21 @@ export const handleApiError = (error: any) => {
   console.error(`Gemini API Error Detail: ${message}`);
   const errorStr = (fullLog + " " + message).toLowerCase();
 
-  // Handling key selection race conditions or project mismatches (Billing Required)
   if (errorStr.includes("requested entity was not found") || errorStr.includes("api key not found")) {
       resetChatSession();
       throw new Error("ENTITY_NOT_FOUND");
   }
 
-  // Handle Transient Errors (Retriable)
   if (status === "503" || status === "504" || errorStr.includes("deadline expired") || errorStr.includes("deadline exceeded") || errorStr.includes("unavailable")) {
       throw new Error("TRANSIENT_ERROR");
   }
 
-  // Handle Quota and Rate Limits
   if (status === "429" || errorStr.includes("quota") || errorStr.includes("limit exceeded") || errorStr.includes("rate limit") || errorStr.includes("resource_exhausted")) {
     resetChatSession();
     throw new Error("QUOTA_EXHAUSTED");
   }
   
-  // Handle Authentication and Permission Issues
-  if (status === "400" || status === "401" || status === "403" || errorStr.includes("expired") || errorStr.includes("invalid")) {
+  if (status === "400" || status === "401" || status === "403" || errorStr.includes("expired") || errorStr.includes("invalid") || errorStr.includes("permission")) {
     resetChatSession();
     throw new Error("INVALID_KEY_OR_PROJECT");
   }
@@ -123,7 +119,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Pr
   }
 }
 
-// Utility to extract JSON from model output.
 const extractJson = (text: string) => {
     try {
         return JSON.parse(text);
@@ -145,7 +140,6 @@ const extractJson = (text: string) => {
     return null;
 };
 
-// Utility to convert File objects to base64 strings.
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -155,7 +149,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// Utility to encode bytes to base64.
 const encode = (bytes: Uint8Array) => {
   let binary = '';
   const len = bytes.byteLength;
@@ -237,7 +230,6 @@ export const generateHeroImage = async (prompt: string): Promise<string> => {
 };
 
 export const generateHeroVideo = async (prompt: string): Promise<string> => {
-    // Note: We create fresh AI instances during polling to ensure current keys are used.
     return withRetry(async () => {
         try {
             let ai = createAIInstance();
@@ -250,7 +242,7 @@ export const generateHeroVideo = async (prompt: string): Promise<string> => {
             while (!op.done) {
               await new Promise(r => setTimeout(r, 10000));
               try {
-                // Fresh instance for every poll to avoid stale session issues
+                // Re-initialize to ensure we have valid project context for polling
                 ai = createAIInstance();
                 op = await ai.operations.getVideosOperation({operation: op});
               } catch (pollError: any) {
@@ -263,23 +255,39 @@ export const generateHeroVideo = async (prompt: string): Promise<string> => {
               }
             }
             
+            if (op.error) {
+                const errorMsg = String(op.error.message || op.error).toLowerCase();
+                if (errorMsg.includes("permission") || errorMsg.includes("unsupported") || errorMsg.includes("billing")) {
+                    throw new Error("VIDEO_NOT_SUPPORTED");
+                }
+                throw new Error(op.error.message || "Video operation failed");
+            }
+
             const link = op.response?.generatedVideos?.[0]?.video?.uri;
-            if (!link) throw new Error("Video generation failed. This project may lack Generative AI Video permissions or region support.");
+            if (!link) {
+              throw new Error("Video generation produced no output. This might be due to safety filters.");
+            }
             
+            // Get the latest API key just before the download fetch
             const apiKey = (process.env.API_KEY || "").trim();
             const downloadUrl = link.includes('?') 
                 ? `${link}&key=${encodeURIComponent(apiKey)}` 
                 : `${link}?key=${encodeURIComponent(apiKey)}`;
             
-            const res = await fetch(downloadUrl);
+            console.log("Attempting to download video from Veo...");
+            const res = await fetch(downloadUrl, { mode: 'cors' });
+            
             if (!res.ok) {
-                const errText = await res.text();
-                console.error("Video Download Body:", errText);
+                console.error("Video download fetch failed:", res.status, res.statusText);
                 if (res.status === 400 || res.status === 403) throw new Error("INVALID_KEY_OR_PROJECT");
                 throw new Error(`Download failed: HTTP ${res.status}`);
             }
 
             const blob = await res.blob();
+            if (blob.size < 100) { // Unlikely small size for a video
+              throw new Error("Downloaded video file is empty or corrupted.");
+            }
+            
             return URL.createObjectURL(blob);
         } catch (error: any) {
             throw handleApiError(error);
