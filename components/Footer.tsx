@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, FacebookIcon, InstagramIcon, XIcon, LinkedInIcon, WhatsAppIcon } from './Icon';
-import { SERVICES } from '../constants';
+import { FacebookIcon, InstagramIcon, LinkedInIcon } from './Icon';
 
 interface FooterProps {
   onScheduleClick: () => void;
@@ -9,85 +8,108 @@ interface FooterProps {
   onPrivacyPolicyClick: () => void;
 }
 
+const YoutubeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+  </svg>
+);
+
 const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPrivacyPolicyClick }) => {
+  const openWarrantyPopup = () => {
+    const width = 1100;
+    const height = 850;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+    
+    window.open(
+        '/warranty.html', 
+        'EliteRoofingWarranty', 
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes,location=no,status=no`
+    );
+  };
+
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <HomeIcon className="h-8 w-8 text-blue-500" />
-              <span className="font-bold text-xl">Elite Roofing Solutions</span>
-            </div>
-            <p className="text-gray-400 max-w-md">
-              Combining innovative AI technology with decades of roofing expertise to provide unparalleled service and quality for your home.
-            </p>
-          </div>
+    <footer className="bg-[#0f172a] text-white relative">
+      {/* Top Blue Bar */}
+      <div className="h-2 w-full bg-blue-700"></div>
+
+      <div className="container mx-auto py-16 px-6 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
+          {/* Services Column */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Services</h3>
-            <ul className="mt-4 space-y-2">
-              {SERVICES.map((service) => (
-                <li key={service.title}>
-                  <a href="#services" className="text-base text-gray-400 hover:text-white transition-colors">
-                    {service.title}
-                  </a>
-                </li>
-              ))}
+            <h3 className="text-lg font-bold mb-6 text-gray-100">Services</h3>
+            <ul className="space-y-3">
+              <li><button onClick={onScheduleClick} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Free Roof Inspection</button></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Residential</a></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Commercial</a></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Roof Repair</a></li>
             </ul>
           </div>
+
+          {/* About Us Column */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Quick Links</h3>
-            <ul className="mt-4 space-y-2">
-              <li>
-                <button type="button" onClick={onEstimateClick} className="text-base text-left bg-transparent border-none p-0 text-gray-400 hover:text-white transition-colors">
-                  AI Estimate
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={onScheduleClick} className="text-base text-left bg-transparent border-none p-0 text-gray-400 hover:text-white transition-colors">
-                  Free Inspection
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={onPrivacyPolicyClick} className="text-base text-left bg-transparent border-none p-0 text-gray-400 hover:text-white transition-colors">
-                  Privacy Policy
-                </button>
-              </li>
+            <h3 className="text-lg font-bold mb-6 text-gray-100">About Us</h3>
+            <ul className="space-y-3">
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Who We Are</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Locations</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Customer Reviews</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Community Support</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Roof Rescue Program</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Careers</button></li>
             </ul>
-             <h3 className="mt-6 text-sm font-semibold text-gray-200 tracking-wider uppercase">Contact Us</h3>
-            <ul className="mt-4 space-y-2 text-gray-400">
-              <li>1546 Roofing Ave, Kansas City, MO 64082</li>
-              <li>Email: contact@eliteroof.ai</li>
-              <li>Phone: (800) 555-ROOF</li>
+          </div>
+
+          {/* Resources Column */}
+          <div>
+            <h3 className="text-lg font-bold mb-6 text-gray-100">Resources</h3>
+            <ul className="space-y-3">
+              <li><button onClick={onEstimateClick} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Financing</button></li>
+              <li><button onClick={openWarrantyPopup} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Warranty</button></li>
+            </ul>
+          </div>
+
+          {/* Connect Column */}
+          <div>
+            <h3 className="text-lg font-bold mb-6 text-gray-100">Connect</h3>
+            <ul className="space-y-6">
+              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Contact Us</button></li>
+              <li className="flex gap-3">
+                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Facebook">
+                    <FacebookIcon className="h-5 w-5 text-white" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Instagram">
+                    <InstagramIcon className="h-5 w-5 text-white" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="LinkedIn">
+                    <LinkedInIcon className="h-5 w-5 text-white" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="YouTube">
+                    <YoutubeIcon className="h-5 w-5 text-white" />
+                </a>
+              </li>
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t border-gray-800 pt-8">
-            <h3 className="text-center text-sm font-semibold text-gray-200 tracking-wider uppercase">Follow Us</h3>
-            <div className="mt-4 flex justify-center space-x-6">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors" title="Facebook">
-                    <span className="sr-only">Facebook</span>
-                    <FacebookIcon className="h-7 w-7" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors" title="Instagram">
-                    <span className="sr-only">Instagram</span>
-                    <InstagramIcon className="h-7 w-7" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors" title="X.com">
-                    <span className="sr-only">X.com</span>
-                    <XIcon className="h-6 w-6" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors" title="LinkedIn">
-                    <span className="sr-only">LinkedIn</span>
-                    <LinkedInIcon className="h-7 w-7" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors" title="WhatsApp">
-                    <span className="sr-only">WhatsApp</span>
-                    <WhatsAppIcon className="h-7 w-7" />
-                </a>
-            </div>
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>&copy; {new Date().getFullYear()} Elite Roofing Solutions. All rights reserved.</p>
+
+        {/* Large Logo Block */}
+        <div className="flex flex-col items-center justify-center pt-10">
+          <div className="flex flex-col items-center gap-2 group cursor-default">
+             <div className="flex items-center">
+                {/* Visual M logo approximation */}
+                <div className="relative w-16 h-12 flex items-center justify-center">
+                    <div className="absolute left-0 bottom-0 w-3 h-full bg-blue-600 transform -skew-x-12"></div>
+                    <div className="absolute left-4 top-0 w-3 h-full bg-white transform skew-x-12"></div>
+                    <div className="absolute right-4 top-0 w-3 h-full bg-blue-600 transform -skew-x-12"></div>
+                    <div className="absolute right-0 bottom-0 w-3 h-full bg-white transform skew-x-12"></div>
+                </div>
+                <div className="ml-3 flex flex-col justify-center leading-none">
+                    <span className="text-4xl font-black text-blue-600 tracking-tighter uppercase italic">Midwest</span>
+                    <span className="text-5xl font-black text-white tracking-tighter uppercase leading-[0.8] italic -mt-1">Roofing</span>
+                </div>
+             </div>
+          </div>
+          <div className="mt-8 text-center text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
+            &copy; {new Date().getFullYear()} Midwest Roofing
           </div>
         </div>
       </div>

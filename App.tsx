@@ -18,10 +18,13 @@ import AboutUsModal from './components/AboutUsModal';
 import GalleryModal from './components/GalleryModal';
 import ProjectVisualizerModal from './components/ProjectVisualizerModal';
 import VeoStudioModal from './components/VeoStudioModal';
-import { GalleryImage } from './types';
-import { VoiceAgentHandle } from './components/VoiceAgentOrb';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import ServiceAreaValidator from './components/ServiceAreaValidator';
+import RatingWidget from './components/RatingWidget';
+import ReviewsModal from './components/ReviewsModal';
+import FeedbackPlatformModal from './components/FeedbackPlatformModal';
+import { GalleryImage } from './types';
+import { VoiceAgentHandle } from './components/VoiceAgentOrb';
 import { WEBSITE_AUDIT_HTML } from './constants';
 
 const App: React.FC = () => {
@@ -35,6 +38,8 @@ const App: React.FC = () => {
   const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
+  const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
+  const [isFeedbackPlatformModalOpen, setIsFeedbackPlatformModalOpen] = useState(false);
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryImage | null>(null);
   const voiceAgentRef = useRef<VoiceAgentHandle>(null);
 
@@ -45,10 +50,6 @@ const App: React.FC = () => {
     setIsDesignStudioModalOpen(false);
     setIsSchedulerModalOpen(true);
   };
-
-  const openSchedulerModal = () => setIsSchedulerModalOpen(true);
-  const openEstimateModal = () => setIsEstimateModalOpen(true);
-  const openLeadCaptureModal = () => setIsLeadCaptureModalOpen(true);
 
   const handleOpenGalleryModal = (item: GalleryImage) => {
     setSelectedGalleryItem(item);
@@ -71,10 +72,10 @@ const App: React.FC = () => {
       <Header
         onFaqClick={() => setIsFaqModalOpen(true)}
         onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
-        onEstimateClick={openEstimateModal}
+        onEstimateClick={() => setIsEstimateModalOpen(true)}
         onAboutUsClick={() => setIsAboutUsModalOpen(true)}
-        onScheduleClick={openSchedulerModal}
-        onContactClick={openLeadCaptureModal}
+        onScheduleClick={() => setIsSchedulerModalOpen(true)}
+        onContactClick={() => setIsLeadCaptureModalOpen(true)}
         onGalleryItemClick={handleOpenGalleryModal}
         onVoiceAgentClick={handleActivateVoiceAgent}
         onAuditClick={handleOpenAudit}
@@ -83,8 +84,8 @@ const App: React.FC = () => {
       
       <main className="flex flex-col pt-20 md:pt-24">
         <Hero 
-          onScheduleClick={openSchedulerModal} 
-          onEstimateClick={openEstimateModal}
+          onScheduleClick={() => setIsSchedulerModalOpen(true)} 
+          onEstimateClick={() => setIsEstimateModalOpen(true)}
           voiceAgentRef={voiceAgentRef}
         />
         
@@ -92,13 +93,12 @@ const App: React.FC = () => {
         
         <AITools
           onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
-          onEstimateClick={openEstimateModal}
+          onEstimateClick={() => setIsEstimateModalOpen(true)}
           onVisualizerClick={() => setIsVisualizerModalOpen(true)}
           onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
         />
         
         <WhyChooseUs />
-
         <Testimonials />
 
         <section className="py-12 bg-white dark:bg-gray-900">
@@ -119,17 +119,19 @@ const App: React.FC = () => {
       </main>
 
       <Footer 
-        onScheduleClick={openSchedulerModal} 
-        onEstimateClick={openEstimateModal}
+        onScheduleClick={() => setIsSchedulerModalOpen(true)} 
+        onEstimateClick={() => setIsEstimateModalOpen(true)}
         onPrivacyPolicyClick={() => setIsPrivacyPolicyModalOpen(true)}
       />
       
       <AIHub 
-        onOpenEstimate={openEstimateModal} 
+        onOpenEstimate={() => setIsEstimateModalOpen(true)} 
         onOpenDamageAssessor={() => setIsDamageAssessorModalOpen(true)} 
         onOpenVisualizer={() => setIsVisualizerModalOpen(true)}
         onOpenDesignStudio={() => setIsDesignStudioModalOpen(true)}
       />
+
+      <RatingWidget onClick={() => setIsReviewsModalOpen(true)} />
       
       {/* Modals */}
       <FAQModal isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
@@ -156,6 +158,16 @@ const App: React.FC = () => {
       <AboutUsModal isOpen={isAboutUsModalOpen} onClose={() => setIsAboutUsModalOpen(false)} />
       <GalleryModal isOpen={isGalleryModalOpen} onClose={() => setIsGalleryModalOpen(false)} item={selectedGalleryItem} />
       <PrivacyPolicyModal isOpen={isPrivacyPolicyModalOpen} onClose={() => setIsPrivacyPolicyModalOpen(false)} />
+      
+      <ReviewsModal 
+        isOpen={isReviewsModalOpen} 
+        onClose={() => setIsReviewsModalOpen(false)} 
+        onWriteReview={() => setIsFeedbackPlatformModalOpen(true)}
+      />
+      <FeedbackPlatformModal 
+        isOpen={isFeedbackPlatformModalOpen} 
+        onClose={() => setIsFeedbackPlatformModalOpen(false)} 
+      />
     </div>
   );
 };

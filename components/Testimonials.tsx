@@ -22,8 +22,8 @@ const Testimonials: React.FC = () => {
           <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-4">
             Hear From Our Happy Homeowners
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Our commitment to excellence is reflected in the experiences of those we've served.
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            Our commitment to excellence is reflected in the real-world experiences of those we've served. Quality roofing isn't just about shingles; it's about service.
           </p>
         </div>
 
@@ -38,16 +38,16 @@ const Testimonials: React.FC = () => {
                   <StarIcon key={i} className="w-5 h-5 text-yellow-400" />
                 ))}
               </div>
-              <p className="text-gray-700 dark:text-gray-300 italic mb-8 relative z-10">
+              <p className="text-gray-700 dark:text-gray-300 italic mb-8 relative z-10 text-lg leading-relaxed">
                 "{testimonial.quote}"
               </p>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md">
+                <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-md uppercase tracking-wider">
                   {testimonial.author.charAt(0)}
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900 dark:text-white">{testimonial.author}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{testimonial.location}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-widest text-[10px] font-black">{testimonial.location}</p>
                 </div>
               </div>
               <div className="absolute top-6 right-8 text-6xl text-blue-200 dark:text-blue-800 font-serif opacity-30 select-none group-hover:scale-110 transition-transform">
@@ -55,16 +55,6 @@ const Testimonials: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-20 text-center">
-            <div className="inline-block p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                <div className="px-8 py-6 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <p className="text-gray-600 dark:text-gray-400 font-medium">
-                        Rated <span className="text-gray-900 dark:text-white font-bold">4.9/5 stars</span> based on 2,500+ reviews across Google and Yelp.
-                    </p>
-                </div>
-            </div>
         </div>
       </div>
     </section>
