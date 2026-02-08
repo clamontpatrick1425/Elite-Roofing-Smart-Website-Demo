@@ -10,7 +10,7 @@ const RatingWidget: React.FC<RatingWidgetProps> = ({ onClick }) => {
     return (
         <button 
             onClick={onClick}
-            className="fixed bottom-6 left-6 z-40 bg-gray-900 dark:bg-gray-800 text-white p-4 rounded-2xl shadow-2xl flex flex-col items-center gap-2 border border-white/10 transition-all group transform scale-[1.3] origin-bottom-left hover:scale-[1.35]"
+            className="fixed bottom-8 left-8 z-40 bg-gray-900 dark:bg-gray-800 text-white p-4 rounded-2xl shadow-2xl flex flex-col items-center gap-2 border border-white/10 transition-all group transform scale-[0.6] origin-bottom-left hover:scale-[0.65]"
             aria-label="View overall ratings and reviews"
         >
             <div className="flex items-center gap-2">

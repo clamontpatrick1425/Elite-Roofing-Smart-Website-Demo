@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FacebookIcon, InstagramIcon, LinkedInIcon } from './Icon';
+import { FacebookIcon, InstagramIcon, LinkedInIcon, HomeIcon } from './Icon';
 
 interface FooterProps {
   onScheduleClick: () => void;
@@ -33,62 +33,62 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
       {/* Top Blue Bar */}
       <div className="h-2 w-full bg-blue-700"></div>
 
-      <div className="container mx-auto py-16 px-6 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
+      <div className="container mx-auto py-20 px-6 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-24">
           {/* Services Column */}
           <div>
-            <h3 className="text-lg font-bold mb-6 text-gray-100">Services</h3>
-            <ul className="space-y-3">
-              <li><button onClick={onScheduleClick} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Free Roof Inspection</button></li>
-              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Residential</a></li>
-              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Commercial</a></li>
-              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Roof Repair</a></li>
+            <h3 className="text-3xl font-bold mb-8 text-gray-100">Services</h3>
+            <ul className="space-y-4">
+              <li><button onClick={onScheduleClick} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Free Roof Inspection</button></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Residential</a></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Commercial</a></li>
+              <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Roof Repair</a></li>
             </ul>
           </div>
 
           {/* About Us Column */}
           <div>
-            <h3 className="text-lg font-bold mb-6 text-gray-100">About Us</h3>
-            <ul className="space-y-3">
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Who We Are</button></li>
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Locations</button></li>
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Customer Reviews</button></li>
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Community Support</button></li>
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Roof Rescue Program</button></li>
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Careers</button></li>
+            <h3 className="text-3xl font-bold mb-8 text-gray-100">About Us</h3>
+            <ul className="space-y-4">
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Who We Are</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Locations</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Customer Reviews</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Community Support</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Roof Rescue Program</button></li>
+              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Careers</button></li>
             </ul>
           </div>
 
           {/* Resources Column */}
           <div>
-            <h3 className="text-lg font-bold mb-6 text-gray-100">Resources</h3>
-            <ul className="space-y-3">
-              <li><button onClick={onEstimateClick} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Financing</button></li>
-              <li><button onClick={openWarrantyPopup} className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Warranty</button></li>
+            <h3 className="text-3xl font-bold mb-8 text-gray-100">Resources</h3>
+            <ul className="space-y-4">
+              <li><button onClick={onEstimateClick} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Financing</button></li>
+              <li><button onClick={openWarrantyPopup} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Warranty</button></li>
             </ul>
           </div>
 
           {/* Contact Column */}
           <div>
-            <h3 className="text-lg font-bold mb-6 text-gray-100">Contact Us</h3>
-            <div className="space-y-4 text-sm text-gray-300">
+            <h3 className="text-3xl font-black mb-8 text-white uppercase tracking-widest">CONTACT US</h3>
+            <div className="space-y-6 text-xl text-gray-300">
                 <div>
-                    <p className="mb-2">1546 Roofing Ave, Kansas City, MO 64082</p>
-                    <p className="mb-2">Email: <a href="mailto:contact@eliteroof.ai" className="hover:text-white transition-colors">contact@eliteroof.ai</a></p>
+                    <p className="mb-3 font-medium">1546 Roofing Ave, Kansas City, MO 64082</p>
+                    <p className="mb-3">Email: <a href="mailto:contact@eliteroof.ai" className="hover:text-white transition-colors">contact@eliteroof.ai</a></p>
                     <p>Phone: <a href="tel:8005557663" className="hover:text-white transition-colors">(800) 555-ROOF</a></p>
                 </div>
-                <div className="flex gap-3 mt-4">
-                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Facebook">
-                        <FacebookIcon className="h-5 w-5 text-white" />
+                <div className="flex gap-4 mt-6">
+                    <a href="#" className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Facebook">
+                        <FacebookIcon className="h-6 w-6 text-white" />
                     </a>
-                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Instagram">
-                        <InstagramIcon className="h-5 w-5 text-white" />
+                    <a href="#" className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Instagram">
+                        <InstagramIcon className="h-6 w-6 text-white" />
                     </a>
-                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="LinkedIn">
-                        <LinkedInIcon className="h-5 w-5 text-white" />
+                    <a href="#" className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="LinkedIn">
+                        <LinkedInIcon className="h-6 w-6 text-white" />
                     </a>
-                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="YouTube">
-                        <YoutubeIcon className="h-5 w-5 text-white" />
+                    <a href="#" className="w-12 h-12 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="YouTube">
+                        <YoutubeIcon className="h-6 w-6 text-white" />
                     </a>
                 </div>
             </div>
@@ -96,24 +96,13 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
         </div>
 
         {/* Large Logo Block */}
-        <div className="flex flex-col items-center justify-center pt-10">
-          <div className="flex flex-col items-center gap-2 group cursor-default">
-             <div className="flex items-center">
-                {/* Visual M logo approximation */}
-                <div className="relative w-16 h-12 flex items-center justify-center">
-                    <div className="absolute left-0 bottom-0 w-3 h-full bg-blue-600 transform -skew-x-12"></div>
-                    <div className="absolute left-4 top-0 w-3 h-full bg-white transform skew-x-12"></div>
-                    <div className="absolute right-4 top-0 w-3 h-full bg-blue-600 transform -skew-x-12"></div>
-                    <div className="absolute right-0 bottom-0 w-3 h-full bg-white transform skew-x-12"></div>
-                </div>
-                <div className="ml-3 flex flex-col justify-center leading-none">
-                    <span className="text-4xl font-black text-blue-600 tracking-tighter uppercase italic">Midwest</span>
-                    <span className="text-5xl font-black text-white tracking-tighter uppercase leading-[0.8] italic -mt-1">Roofing</span>
-                </div>
+        <div className="flex flex-col items-center justify-center pt-12 pb-12">
+          <div className="flex items-center gap-4">
+             <HomeIcon className="h-16 w-16 text-blue-500" />
+             <div className="flex flex-col">
+                <span className="font-bold text-5xl text-white leading-none">Elite Roofing</span>
+                <span className="text-sm text-gray-400 uppercase tracking-widest mt-1">Midwest Premier Service</span>
              </div>
-          </div>
-          <div className="mt-8 text-center text-xs text-gray-500 font-bold uppercase tracking-[0.2em]">
-            &copy; {new Date().getFullYear()} Midwest Roofing
           </div>
         </div>
       </div>
