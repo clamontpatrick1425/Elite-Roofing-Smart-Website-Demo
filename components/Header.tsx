@@ -102,29 +102,29 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <a href="#" onClick={(e) => handleNavClick(e, '#')} className="flex-shrink-0 flex items-center gap-2 group">
-              <HomeIcon className="h-8 w-8 text-blue-600 dark:text-blue-500 group-hover:scale-110 transition-transform" />
+              <HomeIcon className="h-9 w-9 text-blue-600 dark:text-blue-500 group-hover:scale-110 transition-transform" />
               <div className="flex flex-col">
-                <span className="font-bold text-xl text-gray-800 dark:text-gray-50 leading-none">Elite Roofing</span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">Midwest Premier Service</span>
+                <span className="font-bold text-2xl text-gray-800 dark:text-gray-50 leading-none">Elite Roofing</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">Midwest Premier Service</span>
               </div>
             </a>
           </div>
           
           <div className="flex items-center gap-4">
             <div className="hidden lg:flex lg:items-center">
-              <nav className="flex items-center space-x-1">
+              <nav className="flex items-center space-x-2">
                 {/* Tools Dropdown */}
                 <div className="relative" ref={toolsDropdownRef}>
                     <button 
                         onClick={() => setIsToolsDropdownOpen(prev => !prev)}
-                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-black uppercase tracking-wider flex items-center gap-1.5"
+                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-black uppercase tracking-wider flex items-center gap-1.5"
                     >
                         Tools
                         <ChevronDownIcon className={`w-4 h-4 transition-transform ${isToolsDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isToolsDropdownOpen && (
                         <div className="absolute top-full mt-2 w-72 bg-white dark:bg-gray-900 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-50 py-3 animate-fade-in-down border dark:border-gray-800">
-                            <button onClick={(e) => handleNavClick(e, '#damage-assessor')} className="w-full text-left px-6 py-4 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                            <button onClick={(e) => handleNavClick(e, '#damage-assessor')} className="w-full text-left px-6 py-4 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <CameraIcon className="w-4 h-4" />
                                 </div>
@@ -133,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({
                                     <span className="text-[10px] opacity-60">Upload photos for analysis</span>
                                 </div>
                             </button>
-                            <button onClick={(e) => handleNavClick(e, '#estimate')} className="w-full text-left px-6 py-4 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                            <button onClick={(e) => handleNavClick(e, '#estimate')} className="w-full text-left px-6 py-4 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
                                 <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                     <SparkleIcon className="w-4 h-4" />
                                 </div>
@@ -142,7 +142,7 @@ const Header: React.FC<HeaderProps> = ({
                                     <span className="text-[10px] opacity-60">Instant pricing breakdown</span>
                                 </div>
                             </button>
-                            <button onClick={(e) => handleNavClick(e, '#design-studio')} className="w-full text-left px-6 py-4 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                            <button onClick={(e) => handleNavClick(e, '#design-studio')} className="w-full text-left px-6 py-4 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
                                 <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400">
                                     <VideoCameraIcon className="w-4 h-4" />
                                 </div>
@@ -158,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="relative" ref={servicesDropdownRef}>
                     <button 
                         onClick={() => setIsServicesDropdownOpen(prev => !prev)}
-                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-semibold flex items-center gap-1"
+                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-semibold flex items-center gap-1"
                     >
                         Services
                         <ChevronDownIcon className={`w-4 h-4 transition-transform ${isServicesDropdownOpen ? 'rotate-180' : ''}`} />
@@ -169,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <button 
                                     key={service.title}
                                     onClick={(e) => handleNavClick(e, '#services')}
-                                    className="w-full text-left px-6 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-3"
+                                    className="w-full text-left px-6 py-3 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-3"
                                 >
                                     <service.icon className="w-4 h-4" />
                                     {service.title}
@@ -182,7 +182,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="relative" ref={galleryDropdownRef}>
                     <button 
                         onClick={() => setIsGalleryDropdownOpen(prev => !prev)}
-                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-semibold flex items-center gap-1"
+                        className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-semibold flex items-center gap-1"
                     >
                         Gallery
                         <ChevronDownIcon className={`w-4 h-4 transition-transform ${isGalleryDropdownOpen ? 'rotate-180' : ''}`} />
@@ -193,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <button
                                     key={item.title} 
                                     onClick={() => handleGalleryItemClick(item)}
-                                    className="w-full text-left block px-6 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                    className="w-full text-left block px-6 py-3 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                 >
                                     {item.title}
                                 </button>
@@ -202,15 +202,15 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
 
-                <a href="#about-us" onClick={(e) => handleNavClick(e, '#about-us')} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-semibold">About</a>
-                <a href="#schedule" onClick={(e) => handleNavClick(e, '#schedule')} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-semibold">Inspection</a>
-                <button onClick={() => onContactClick()} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-sm font-semibold">Contact</button>
+                <a href="#about-us" onClick={(e) => handleNavClick(e, '#about-us')} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-semibold">About</a>
+                <a href="#schedule" onClick={(e) => handleNavClick(e, '#schedule')} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-semibold">Inspection</a>
+                <button onClick={() => onContactClick()} className="text-gray-600 dark:text-gray-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 px-3 py-2 rounded-md text-base font-semibold">Contact</button>
               </nav>
               
               <div className="ml-4 flex items-center gap-4 border-l pl-4 border-gray-200 dark:border-gray-800">
                 <button
                     onClick={onVoiceAgentClick}
-                    className="bg-blue-600 text-white font-bold py-2 px-5 rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs uppercase tracking-wider"
+                    className="bg-blue-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-sm uppercase tracking-wider"
                 >
                     <MicrophoneIcon className="w-4 h-4" />
                     <span>Call Now</span>

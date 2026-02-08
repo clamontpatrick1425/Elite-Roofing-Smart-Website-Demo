@@ -58,17 +58,32 @@ export const TESTIMONIALS: Testimonial[] = [
     {
         quote: "Elite Roofing was a lifesaver after the storm. Their AI scheduler got me an emergency tarping service within hours.",
         author: "Sarah J.",
-        location: "Beverly Hills, CA"
+        location: "Lee's Summit, MO"
     },
     {
-        quote: "The estimate calculator on their website was surprisingly accurate. It gave me a great starting point.",
+        quote: "The estimate calculator on their website was surprisingly accurate. It gave me a great starting point for our project.",
         author: "Michael B.",
-        location: "Pacific Palisades, CA"
+        location: "Overland Park, KS"
     },
     {
-        quote: "I uploaded photos of my damaged roof, and their team called me back with a clear plan.",
+        quote: "I uploaded photos of my damaged roof, and their team called me back with a clear plan. True professionals.",
         author: "Emily R.",
-        location: "Bel Air, CA"
+        location: "Blue Springs, MO"
+    },
+    {
+        quote: "Professional, punctual, and the technology they use made the whole process transparent. Highly recommend!",
+        author: "James T.",
+        location: "Kansas City, MO"
+    },
+    {
+        quote: "They handled the insurance claim process perfectly. Our new roof in Liberty looks fantastic.",
+        author: "Amanda L.",
+        location: "Liberty, MO"
+    },
+    {
+        quote: "Fair pricing and incredible workmanship. The crew cleaned up every nail. Best in the KC metro area.",
+        author: "Robert P.",
+        location: "Lenexa, KS"
     }
 ];
 

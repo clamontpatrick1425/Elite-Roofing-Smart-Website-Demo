@@ -68,26 +68,30 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
             </ul>
           </div>
 
-          {/* Connect Column */}
+          {/* Contact Column */}
           <div>
-            <h3 className="text-lg font-bold mb-6 text-gray-100">Connect</h3>
-            <ul className="space-y-6">
-              <li><button className="text-gray-300 hover:text-white transition-colors text-sm font-medium">Contact Us</button></li>
-              <li className="flex gap-3">
-                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Facebook">
-                    <FacebookIcon className="h-5 w-5 text-white" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Instagram">
-                    <InstagramIcon className="h-5 w-5 text-white" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="LinkedIn">
-                    <LinkedInIcon className="h-5 w-5 text-white" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="YouTube">
-                    <YoutubeIcon className="h-5 w-5 text-white" />
-                </a>
-              </li>
-            </ul>
+            <h3 className="text-lg font-bold mb-6 text-gray-100">Contact Us</h3>
+            <div className="space-y-4 text-sm text-gray-300">
+                <div>
+                    <p className="mb-2">1546 Roofing Ave, Kansas City, MO 64082</p>
+                    <p className="mb-2">Email: <a href="mailto:contact@eliteroof.ai" className="hover:text-white transition-colors">contact@eliteroof.ai</a></p>
+                    <p>Phone: <a href="tel:8005557663" className="hover:text-white transition-colors">(800) 555-ROOF</a></p>
+                </div>
+                <div className="flex gap-3 mt-4">
+                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Facebook">
+                        <FacebookIcon className="h-5 w-5 text-white" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="Instagram">
+                        <InstagramIcon className="h-5 w-5 text-white" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="LinkedIn">
+                        <LinkedInIcon className="h-5 w-5 text-white" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg" aria-label="YouTube">
+                        <YoutubeIcon className="h-5 w-5 text-white" />
+                    </a>
+                </div>
+            </div>
           </div>
         </div>
 
