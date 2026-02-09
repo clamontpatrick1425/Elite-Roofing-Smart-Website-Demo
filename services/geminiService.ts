@@ -195,13 +195,40 @@ export const sendMessageToChatbotStream = async (
   });
 };
 
-export const generateComparisonImage = async (prompt: string): Promise<string> => {
+export const generateComparisonImage = async (prompt: string, imageBase64?: string): Promise<string> => {
   return withRetry(async () => {
     try {
       const ai = createAIInstance();
+      let contents;
+
+      if (imageBase64) {
+        const data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+        const mimeType = imageBase64.includes(';') ? imageBase64.split(';')[0].split(':')[1] : 'image/jpeg';
+        
+        contents = {
+            parts: [
+                {
+                    text: `Create a side-by-side comparison image. Left side: The original provided image. Right side: The same scene but with this change: ${prompt}. Maintain exact camera angle, lighting, and environment.`
+                },
+                {
+                    inlineData: {
+                        mimeType: mimeType,
+                        data: data
+                    }
+                }
+            ]
+        };
+      } else {
+        contents = { 
+            parts: [{ 
+                text: `Create a high-resolution, side-by-side before and after comparison of a residential home. Left side (Before): ${prompt.split(' vs ')[0]}. Right side (After): ${prompt.split(' vs ')[1] || 'Brand new premium roof'}. Style: Cinematic wide drone shot, 45-degree angle, professional real estate photography.` 
+            }] 
+        };
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: { parts: [{ text: `Create a high-resolution, side-by-side before and after comparison of a residential home. Left side (Before): ${prompt.split(' vs ')[0]}. Right side (After): ${prompt.split(' vs ')[1] || 'Brand new premium roof'}. Style: Cinematic wide drone shot, 45-degree angle, professional real estate photography.` }] },
+        contents: contents,
         config: { imageConfig: { aspectRatio: "16:9" } }
       });
       for (const part of response.candidates[0].content.parts) {

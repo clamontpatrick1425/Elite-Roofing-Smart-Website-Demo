@@ -24,10 +24,10 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   const [genError, setGenError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const attemptAiGeneration = async () => {
+  const attemptAiGeneration = async (bypassKeyCheck = false) => {
     const aistudio = (window as any).aistudio;
-    // We only attempt auto-generation if the key is already present/selected
-    if (aistudio && await aistudio.hasSelectedApiKey()) {
+    // We only attempt auto-generation if the key is already present/selected or explicitly bypassed
+    if (bypassKeyCheck || (aistudio && await aistudio.hasSelectedApiKey())) {
         setIsGenerating(true);
         setGenError(null);
         try {
@@ -39,6 +39,8 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
             console.warn("Hero AI Generation failed:", e);
             if (e.message === "VIDEO_NOT_SUPPORTED") {
                 setGenError("AI Render requires a paid project key.");
+            } else if (e.message === "QUOTA_EXHAUSTED") {
+                setGenError("Daily quota limit reached.");
             } else {
                 setGenError("AI Render failed. Using premium background.");
             }
@@ -50,9 +52,10 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
     }
   };
 
-  useEffect(() => {
-    attemptAiGeneration();
-  }, []);
+  // Removed automatic generation on mount to conserve quota
+  // useEffect(() => {
+  //   attemptAiGeneration();
+  // }, []);
 
   const handleLoadedData = () => {
     setIsVideoLoaded(true);
@@ -65,7 +68,8 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
     const aistudio = (window as any).aistudio;
     if (aistudio) {
         await aistudio.openSelectKey();
-        attemptAiGeneration();
+        // Force generation attempt immediately after key selection, bypassing the race-prone check
+        attemptAiGeneration(true);
     }
   };
 
@@ -130,6 +134,12 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
                     <SparkleIcon className="w-3 h-3" />
                     AI Cinematic Render Active
                 </div>
+            )}
+            
+            {genError && (
+               <div className="text-[10px] text-red-400 font-bold uppercase tracking-widest bg-red-900/20 px-3 py-1 rounded-full border border-red-500/30">
+                   {genError}
+               </div>
             )}
           </div>
 

@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { XMarkIcon, SparkleIcon, ArrowPathIcon } from './Icon';
+import React, { useState, useRef } from 'react';
+import { XMarkIcon, SparkleIcon, ArrowPathIcon, CameraIcon } from './Icon';
 import { generateComparisonImage } from '../services/geminiService';
 
 interface ProjectVisualizerModalProps {
@@ -11,15 +11,32 @@ interface ProjectVisualizerModalProps {
 const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen, onClose }) => {
   const [prompt, setPrompt] = useState('Old weathered gray shingles vs Brand new charcoal architectural shingles');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setUploadedImage(reader.result as string);
+            // Update default prompt if image is uploaded to be more relevant
+            if (prompt === 'Old weathered gray shingles vs Brand new charcoal architectural shingles') {
+                setPrompt('Replace existing roof with premium slate tiles');
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isLoading) return;
     setIsLoading(true);
     setError(null);
     try {
-      const url = await generateComparisonImage(prompt);
+      const url = await generateComparisonImage(prompt, uploadedImage || undefined);
       setGeneratedImage(url);
     } catch (err: any) {
       let msg = err.message || "Failed to generate visual.";
@@ -36,6 +53,12 @@ const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen,
     link.href = generatedImage;
     link.download = 'elite-roof-comparison.png';
     link.click();
+  };
+
+  const handleClearUpload = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setUploadedImage(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   if (!isOpen) return null;
@@ -61,18 +84,56 @@ const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen,
         <main className="flex-1 overflow-y-auto p-8 bg-gray-50 dark:bg-gray-900/50">
           <div className="flex flex-col gap-8 h-full">
             <div className="flex flex-col gap-3">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Comparison Prompt</label>
               <div className="flex flex-col sm:flex-row gap-4">
-                <input 
-                  value={prompt} 
-                  onChange={e => setPrompt(e.target.value)}
-                  placeholder="Describe Before vs After (e.g., Old brown tile vs Black Metal)"
-                  className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-6 py-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all shadow-sm"
-                />
+                {/* Upload Area */}
+                <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative w-full sm:w-32 h-24 sm:h-auto flex-shrink-0 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${uploadedImage ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'}`}
+                >
+                    {uploadedImage ? (
+                        <>
+                            <img src={uploadedImage} alt="Reference" className="w-full h-full object-cover rounded-xl opacity-80" />
+                            <button 
+                                onClick={handleClearUpload}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors z-10"
+                                title="Remove photo"
+                            >
+                                <XMarkIcon className="w-3 h-3" />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <CameraIcon className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-[10px] text-gray-500 font-bold text-center leading-tight">Upload<br/>Photo</span>
+                        </>
+                    )}
+                    <input 
+                        ref={fileInputRef} 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleFileChange} 
+                    />
+                </div>
+
+                {/* Text Prompt */}
+                <div className="flex-1 flex flex-col gap-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                        {uploadedImage ? "Desired Transformation" : "Comparison Prompt"}
+                    </label>
+                    <textarea 
+                        value={prompt} 
+                        onChange={e => setPrompt(e.target.value)}
+                        placeholder={uploadedImage ? "e.g. Change roof to black metal standing seam" : "Describe Before vs After (e.g., Old brown tile vs Black Metal)"}
+                        className="w-full h-24 sm:h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all shadow-sm resize-none"
+                    />
+                </div>
+
+                {/* Generate Button */}
                 <button 
                   onClick={handleGenerate}
                   disabled={isLoading}
-                  className="bg-blue-600 text-white font-bold px-8 py-4 rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  className="w-full sm:w-auto bg-blue-600 text-white font-bold px-8 py-4 rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 self-stretch"
                 >
                   {isLoading ? (
                     <>
@@ -82,7 +143,7 @@ const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen,
                   ) : (
                     <>
                       <SparkleIcon className="w-5 h-5" />
-                      Generate Visual
+                      Generate
                     </>
                   )}
                 </button>
@@ -102,7 +163,7 @@ const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen,
               ) : (
                 <div className="flex flex-col items-center gap-4 text-center p-8 opacity-40">
                   <SparkleIcon className="w-16 h-16 text-blue-600 mb-2" />
-                  <p className="text-sm font-medium">Your transformation preview will appear here.<br/>Try: "Damaged shingles vs Midnight Charcoal architectural tiles"</p>
+                  <p className="text-sm font-medium">Your transformation preview will appear here.<br/>Try uploading a photo or typing a scenario.</p>
                 </div>
               )}
               {isLoading && (
