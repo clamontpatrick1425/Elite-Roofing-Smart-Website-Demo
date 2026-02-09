@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { getAIEstimate } from '../services/geminiService';
 import { EstimateFormData } from '../types';
@@ -50,7 +51,9 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
       setResult(estimate);
       setStep(4);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      let msg = err instanceof Error ? err.message : 'An unknown error occurred.';
+      if (msg === 'QUOTA_EXHAUSTED') msg = 'High traffic: AI capacity reached. Please try again momentarily.';
+      setError(msg);
       setStep(3); // stay on contact info step to show error
     } finally {
       setLoading(false);

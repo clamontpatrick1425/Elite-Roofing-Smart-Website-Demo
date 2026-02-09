@@ -22,7 +22,9 @@ const ProjectVisualizerModal: React.FC<ProjectVisualizerModalProps> = ({ isOpen,
       const url = await generateComparisonImage(prompt);
       setGeneratedImage(url);
     } catch (err: any) {
-      setError(err.message || "Failed to generate visual.");
+      let msg = err.message || "Failed to generate visual.";
+      if (msg === 'QUOTA_EXHAUSTED') msg = 'High traffic: AI capacity reached. Please try again momentarily.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }

@@ -80,6 +80,7 @@ const App: React.FC = () => {
         onVoiceAgentClick={handleActivateVoiceAgent}
         onAuditClick={handleOpenAudit}
         onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
+        onVisualizerClick={() => setIsVisualizerModalOpen(true)}
       />
       
       <main className="flex flex-col pt-20 md:pt-24">

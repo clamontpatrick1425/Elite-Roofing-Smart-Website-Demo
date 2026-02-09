@@ -45,6 +45,8 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
     } catch (err: any) {
       if (err.message === "ENTITY_NOT_FOUND" || err.message === "INVALID_KEY_OR_PROJECT" || err.message === "VIDEO_NOT_SUPPORTED") {
           setError("Video generation requires a PAID API key from a billable Google Cloud project. Verify your project supports Generative AI Video and your region is allowed.");
+      } else if (err.message === 'QUOTA_EXHAUSTED') {
+          setError('High traffic: AI capacity reached. Please try again momentarily.');
       } else {
           setError(err.message || "Failed to generate cinematic video.");
       }

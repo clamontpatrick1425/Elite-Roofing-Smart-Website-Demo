@@ -16,6 +16,7 @@ interface HeaderProps {
   onVoiceAgentClick: () => void;
   onAuditClick: () => void;
   onVeoStudioClick: () => void;
+  onVisualizerClick: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -28,7 +29,8 @@ const Header: React.FC<HeaderProps> = ({
     onGalleryItemClick, 
     onVoiceAgentClick,
     onAuditClick,
-    onVeoStudioClick
+    onVeoStudioClick,
+    onVisualizerClick
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
@@ -80,6 +82,7 @@ const Header: React.FC<HeaderProps> = ({
     if (href === '#estimate') { onEstimateClick(); return; }
     if (href === '#damage-assessor') { onDamageAssessorClick(); return; }
     if (href === '#design-studio') { onVeoStudioClick(); return; }
+    if (href === '#visualizer') { onVisualizerClick(); return; }
     if (href === '#about-us') { onAboutUsClick(); return; }
     if (href === '#schedule') { onScheduleClick(); return; }
     if (href === '#contact') { onContactClick(); return; }
@@ -124,31 +127,48 @@ const Header: React.FC<HeaderProps> = ({
                     </button>
                     {isToolsDropdownOpen && (
                         <div className="absolute top-full mt-2 w-72 bg-white dark:bg-gray-900 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-50 py-3 animate-fade-in-down border dark:border-gray-800">
-                            <button onClick={(e) => handleNavClick(e, '#damage-assessor')} className="w-full text-left px-6 py-4 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
-                                <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                    <CameraIcon className="w-5 h-5" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="font-bold">AI Checkup</span>
-                                    <span className="text-xs opacity-60">Upload photos for analysis</span>
-                                </div>
-                            </button>
+                            
+                            {/* AI Project Estimate */}
                             <button onClick={(e) => handleNavClick(e, '#estimate')} className="w-full text-left px-6 py-4 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
-                                <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <SparkleIcon className="w-5 h-5" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-bold">AI Estimate</span>
+                                    <span className="font-bold">AI Project Estimate</span>
                                     <span className="text-xs opacity-60">Instant pricing breakdown</span>
                                 </div>
                             </button>
+
+                            {/* Design Studio */}
                             <button onClick={(e) => handleNavClick(e, '#design-studio')} className="w-full text-left px-6 py-4 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
-                                <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                     <VideoCameraIcon className="w-5 h-5" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-bold">Design Studio</span>
                                     <span className="text-xs opacity-60">Animate your roof vision</span>
+                                </div>
+                            </button>
+
+                            {/* Project Visualizer */}
+                             <button onClick={(e) => handleNavClick(e, '#visualizer')} className="w-full text-left px-6 py-4 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                                <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                    <SparkleIcon className="w-5 h-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold">Project Visualizer</span>
+                                    <span className="text-xs opacity-60">Before & After comparison</span>
+                                </div>
+                            </button>
+
+                            {/* AI Damage Check */}
+                            <button onClick={(e) => handleNavClick(e, '#damage-assessor')} className="w-full text-left px-6 py-4 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-3">
+                                <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400">
+                                    <CameraIcon className="w-5 h-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold">AI Damage Check</span>
+                                    <span className="text-xs opacity-60">Upload photos for analysis</span>
                                 </div>
                             </button>
                         </div>

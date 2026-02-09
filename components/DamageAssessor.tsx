@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef } from 'react';
 import { analyzeRoofImage, analyzeRoofVideo } from '../services/geminiService';
 import { CameraIcon } from './Icon';
@@ -88,7 +87,9 @@ const DamageAssessor: React.FC<DamageAssessorProps> = ({ onScheduleClick }) => {
             }
             setAnalysis(result);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            let msg = err instanceof Error ? err.message : 'An unknown error occurred.';
+            if (msg === 'QUOTA_EXHAUSTED') msg = 'High traffic: AI capacity reached. Please try again momentarily.';
+            setError(msg);
         } finally {
             setLoading(false);
         }
