@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { XMarkIcon, SparkleIcon, CameraIcon, ArrowPathIcon, VideoCameraIcon } from './Icon';
 import { generateHeroVideo } from '../services/geminiService';
+import { storeVideoBlob, clearVideoBlob } from '../services/videoDb';
 
 interface VeoStudioModalProps {
   isOpen: boolean;
@@ -15,6 +16,56 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isApplied, setIsApplied] = useState(false);
+  const [hasCustomHero, setHasCustomHero] = useState(() => {
+    try {
+      return !!localStorage.getItem('custom_hero_video');
+    } catch {
+      return false;
+    }
+  });
+
+  const handleApplyToHero = async () => {
+    if (!videoUrl) return;
+    try {
+      // Since videoUrl is a blob: URL in the current session, we can fetch it to get the Blob object,
+      // and then store it in IndexedDB so it's persisted across sessions!
+      if (videoUrl.startsWith('blob:')) {
+        const response = await fetch(videoUrl);
+        const blob = await response.blob();
+        await storeVideoBlob(blob);
+        localStorage.setItem('custom_hero_video', 'indexeddb');
+      } else {
+        localStorage.setItem('custom_hero_video', videoUrl);
+      }
+      window.dispatchEvent(new Event('hero-video-updated'));
+      setIsApplied(true);
+      setHasCustomHero(true);
+    } catch (e) {
+      console.error("Failed to store custom video to IndexedDB", e);
+      // Fallback directly to setting raw value
+      try {
+        localStorage.setItem('custom_hero_video', videoUrl);
+        window.dispatchEvent(new Event('hero-video-updated'));
+        setIsApplied(true);
+        setHasCustomHero(true);
+      } catch (e2) {
+        console.error(e2);
+      }
+    }
+  };
+
+  const handleResetHero = async () => {
+    try {
+      localStorage.removeItem('custom_hero_video');
+      await clearVideoBlob();
+      window.dispatchEvent(new Event('hero-video-updated'));
+      setIsApplied(false);
+      setHasCustomHero(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,6 +84,7 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     setError(null);
     setVideoUrl(null);
+    setIsApplied(false);
 
     const aistudio = (window as any).aistudio;
     if (aistudio && !(await aistudio.hasSelectedApiKey())) {
@@ -140,11 +192,36 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
             {/* Output Column */}
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 flex items-center justify-center relative overflow-hidden shadow-2xl">
               {videoUrl ? (
-                <div className="w-full h-full animate-fade-in group">
-                  <video src={videoUrl} controls autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                  <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
+                <div className="w-full h-full animate-fade-in relative group/video">
+                  <video src={videoUrl} controls autoPlay loop muted playsInline className="w-full h-full object-cover animate-fade-in" />
+                  <div className="absolute top-6 left-6 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 z-10">
                     <SparkleIcon className="w-3 h-3" />
                     AI Cinematic Render
+                  </div>
+                  
+                  {/* Actions Overlay */}
+                  <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-2 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/10 opacity-100 sm:opacity-0 group-hover/video:opacity-100 transition-opacity duration-300 z-10">
+                    <p className="text-white text-xs font-bold mb-1">Set this render as your loop website background?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleApplyToHero}
+                        className={`flex-1 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          isApplied 
+                            ? 'bg-green-600 text-white cursor-default' 
+                            : 'bg-white text-gray-900 hover:bg-gray-150'
+                        }`}
+                      >
+                        {isApplied ? '✓ Background Active' : 'Set as Hero Background'}
+                      </button>
+                      {hasCustomHero && (
+                        <button
+                          onClick={handleResetHero}
+                          className="bg-red-600/80 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-xl text-xs transition-colors cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -161,6 +238,14 @@ const VeoStudioModal: React.FC<VeoStudioModalProps> = ({ isOpen, onClose }) => {
                         <div className="opacity-40 flex flex-col items-center gap-4">
                             <VideoCameraIcon className="w-20 h-20 text-gray-400" />
                             <p className="text-sm font-medium">Your cinematic flyover will appear here.</p>
+                            {hasCustomHero && (
+                              <button 
+                                onClick={handleResetHero} 
+                                className="mt-2 text-xs text-red-500 hover:text-red-600 underline font-bold cursor-pointer"
+                              >
+                                Reset Custom Hero Background Video
+                              </button>
+                            )}
                         </div>
                    )}
                 </div>

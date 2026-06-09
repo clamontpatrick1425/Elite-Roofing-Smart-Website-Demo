@@ -1,8 +1,8 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import VoiceAgentOrb, { VoiceAgentHandle } from './VoiceAgentOrb';
-import { ShieldCheckIcon, UserCircleIcon, SparkleIcon, ArrowPathIcon, XMarkIcon } from './Icon';
-import { generateHeroVideo } from '../services/geminiService';
+import { ShieldCheckIcon, UserCircleIcon, SparkleIcon, ArrowPathIcon } from './Icon';
+import { getVideoBlob } from '../services/videoDb';
 
 interface HeroProps {
     onScheduleClick: () => void;
@@ -11,66 +11,190 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgentRef }) => {
-  // A high-quality, stable cinematic roofing video source for production
-  const PERMANENT_CINEMATIC_VIDEO = "https://assets.mixkit.co/videos/preview/mixkit-modern-house-with-dark-shingles-in-the-forest-43180-large.mp4";
   const HERO_IMAGE = 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2';
   
-  const CINEMATIC_PROMPT = "Cinematic wide shot of two professional roofers in high-visibility safety gear expertly installing premium slate tiles on a modern luxury mansion. Golden hour lighting with soft sun flares. Smooth drone tracking shot moving slowly across the roofline. 4k resolution, highly detailed textures, professional architectural videography.";
-
-  const [videoUrl, setVideoUrl] = useState(PERMANENT_CINEMATIC_VIDEO);
-  const [isAiGenerated, setIsAiGenerated] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const attemptAiGeneration = async (bypassKeyCheck = false) => {
-    const aistudio = (window as any).aistudio;
-    // We only attempt auto-generation if the key is already present/selected or explicitly bypassed
-    if (bypassKeyCheck || (aistudio && await aistudio.hasSelectedApiKey())) {
-        setIsGenerating(true);
-        setGenError(null);
-        try {
-            const url = await generateHeroVideo(CINEMATIC_PROMPT);
-            setVideoUrl(url);
-            setIsAiGenerated(true);
-            setIsVideoLoaded(false); 
-        } catch (e: any) {
-            console.warn("Hero AI Generation failed:", e);
-            if (e.message === "VIDEO_NOT_SUPPORTED") {
-                setGenError("AI Render requires a paid project key.");
-            } else if (e.message === "QUOTA_EXHAUSTED") {
-                setGenError("Daily quota limit reached.");
-            } else {
-                setGenError("AI Render failed. Using premium background.");
-            }
-            // Keep using the permanent video on failure
-            setVideoUrl(PERMANENT_CINEMATIC_VIDEO);
-        } finally {
-            setIsGenerating(false);
+  // Load custom video if generated
+  useEffect(() => {
+    const loadVideoSource = async () => {
+      try {
+        const stored = localStorage.getItem('custom_hero_video');
+        if (stored === 'indexeddb') {
+          const blob = await getVideoBlob();
+          if (blob) {
+            const blobUrl = URL.createObjectURL(blob);
+            setCustomVideoUrl(blobUrl);
+            setCurrentMediaIndex(0); // auto-select the AI video
+          }
+        } else if (stored && !stored.startsWith('blob:')) {
+          setCustomVideoUrl(stored);
+          setCurrentMediaIndex(0);
         }
+      } catch (e) {
+        console.error("Failed to load custom video", e);
+      }
+    };
+
+    loadVideoSource();
+
+    const handleUpdate = () => {
+      loadVideoSource();
+      setIsVideoLoaded(false);
+    };
+
+    window.addEventListener('hero-video-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('hero-video-updated', handleUpdate);
+    };
+  }, []);
+
+  // Built-in pool of stable backgrounds (including a static slate option for silent/disabled view)
+  const BACKGROUND_MEDIA_OPTIONS = useMemo(() => {
+    const list = [];
+    
+    if (customVideoUrl) {
+      list.push({
+        name: "✨ AI Design Render",
+        type: "video" as const,
+        url: customVideoUrl,
+        poster: HERO_IMAGE
+      });
+    }
+    
+    list.push(
+      {
+        name: "Modern House Shingles",
+        type: "video" as const,
+        url: "https://player.vimeo.com/external/435674703.sd.mp4?s=79fa3ffd107e20ad4cf909d224850021c3b2e5ef&profile_id=139&oauth2_token_id=57447761",
+        poster: HERO_IMAGE
+      },
+      {
+        name: "Scenic Sunset Aerial",
+        type: "video" as const,
+        url: "https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c02cba73d113f1d41359b4e19cbd0a56&profile_id=139&oauth2_token_id=57447761",
+        poster: HERO_IMAGE
+      },
+      {
+        name: "Standard Landscape Loop",
+        type: "video" as const,
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        poster: HERO_IMAGE
+      },
+      {
+        name: "Static Slate Image",
+        type: "image" as const,
+        url: HERO_IMAGE,
+        poster: HERO_IMAGE
+      }
+    );
+    
+    return list;
+  }, [customVideoUrl]);
+
+  const currentMedia = BACKGROUND_MEDIA_OPTIONS[currentMediaIndex] || BACKGROUND_MEDIA_OPTIONS[0];
+
+  const togglePlayPause = () => {
+    const el = videoRef.current;
+    if (el) {
+      if (isPlaying) {
+        el.pause();
+        setIsPlaying(false);
+      } else {
+        el.play()
+          .then(() => setIsPlaying(true))
+          .catch(e => console.warn("Failed to play video programmatically:", e));
+      }
     }
   };
 
-  // Removed automatic generation on mount to conserve quota
-  // useEffect(() => {
-  //   attemptAiGeneration();
-  // }, []);
+  const handleCycleMedia = () => {
+    setIsVideoLoaded(false);
+    const nextIndex = (currentMediaIndex + 1) % BACKGROUND_MEDIA_OPTIONS.length;
+    setCurrentMediaIndex(nextIndex);
+    setIsPlaying(true);
+  };
+
+  // Synchronous and immediate programmatic autoplay enforcers
+  useEffect(() => {
+    const el = videoRef.current;
+    let fallbackCleanup: (() => void) | null = null;
+
+    if (el && currentMedia.type === 'video') {
+      el.defaultMuted = true;
+      el.muted = true;
+      el.playsInline = true;
+      el.setAttribute('muted', 'true');
+      el.setAttribute('playsinline', 'true');
+      
+      el.load();
+      
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsVideoLoaded(true);
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.warn("Autoplay waiting for video stream or interaction:", err);
+            
+            // Bypasses browser autoplay block on screen touch/click interactions
+            const startFallbackPlay = () => {
+              if (el) {
+                el.play()
+                  .then(() => {
+                    setIsVideoLoaded(true);
+                    setIsPlaying(true);
+                    if (fallbackCleanup) fallbackCleanup();
+                  })
+                  .catch(e => console.warn("Deferred interaction play bypass failed:", e));
+              }
+            };
+            
+            fallbackCleanup = () => {
+              window.removeEventListener('click', startFallbackPlay);
+              window.removeEventListener('touchstart', startFallbackPlay);
+            };
+
+            window.addEventListener('click', startFallbackPlay);
+            window.addEventListener('touchstart', startFallbackPlay);
+          });
+      }
+    }
+
+    return () => {
+      if (fallbackCleanup) {
+        fallbackCleanup();
+      }
+    };
+  }, [currentMediaIndex, customVideoUrl, currentMedia.type]);
 
   const handleLoadedData = () => {
-    setIsVideoLoaded(true);
-    if (videoRef.current) {
-        videoRef.current.play().catch(e => console.error("Autoplay failed:", e));
+    if (videoRef.current && currentMedia.type === 'video') {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play()
+        .then(() => {
+          setIsVideoLoaded(true);
+          setIsPlaying(true);
+        })
+        .catch(e => console.warn("Deferred play failed:", e));
     }
   };
 
-  const handleOpenSelectKey = async () => {
-    const aistudio = (window as any).aistudio;
-    if (aistudio) {
-        await aistudio.openSelectKey();
-        // Force generation attempt immediately after key selection, bypassing the race-prone check
-        attemptAiGeneration(true);
+  const handleVideoError = () => {
+    console.warn("Active video source failed, cycling to next fallback stream.");
+    const stored = localStorage.getItem('custom_hero_video');
+    if (stored && currentMedia.name.includes("AI")) {
+      localStorage.removeItem('custom_hero_video');
+      setCustomVideoUrl(null);
     }
+    handleCycleMedia();
   };
 
   return (
@@ -79,29 +203,83 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           {/* Static Background Image Fallback */}
           <div
-              className="absolute inset-0 bg-cover bg-center z-0"
+              className={`absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-[1500ms] ${
+                currentMedia.type === 'image' || !isVideoLoaded ? 'opacity-100' : 'opacity-40'
+              }`}
               style={{ backgroundImage: `url('${HERO_IMAGE}')` }}
           ></div>
 
-          {/* Background Video - Optimized for background usage */}
-          <video 
-            key={videoUrl}
-            ref={videoRef}
-            src={videoUrl}
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-            onLoadedData={handleLoadedData}
-            poster={HERO_IMAGE}
-            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-100' : 'opacity-20'}`}
-          />
+          {/* Background Video (unthrottled opacity class to ensure play triggers) */}
+          {currentMedia.type === 'video' && (
+            <video 
+              ref={videoRef}
+              src={currentMedia.url}
+              autoPlay={isPlaying}
+              loop={true}
+              muted={true}
+              playsInline={true}
+              onLoadedData={handleLoadedData}
+              onCanPlay={handleLoadedData}
+              onLoadedMetadata={handleLoadedData}
+              onPlay={() => {
+                setIsVideoLoaded(true);
+                setIsPlaying(true);
+              }}
+              onError={handleVideoError}
+              poster={currentMedia.poster}
+              className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${
+                isVideoLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          )}
           
           {/* Gradients and Overlays */}
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/40 to-gray-900/80 z-20"></div>
-          <div className="absolute inset-0 bg-black/10 z-20"></div>
+          <div className="absolute inset-0 bg-black/15 z-20"></div>
       </div>
       
+      {/* Ambient Background Media Control Board */}
+      <div className="absolute bottom-6 right-6 z-40 bg-black/45 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-3 shadow-2xl animate-fade-in pointer-events-auto">
+        <span className="text-[10px] uppercase font-black tracking-widest text-white/50 pl-1 select-none">
+          Ambient Control
+        </span>
+        <div className="h-4 w-[1px] bg-white/10"></div>
+        
+        {/* Play/Pause Button */}
+        {currentMedia.type === 'video' && (
+          <button
+            onClick={togglePlayPause}
+            className="p-1 px-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-all font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+            title={isPlaying ? "Pause background loop" : "Play background loop"}
+          >
+            {isPlaying ? (
+              <>
+                <span className="inline-block w-1 h-3 bg-white rounded-sm"></span>
+                <span className="inline-block w-1 h-3 bg-white rounded-sm"></span>
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <span>Play</span>
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Change Background Style Carousel */}
+        <button
+          onClick={handleCycleMedia}
+          className="p-1 px-2.5 rounded-lg text-white bg-blue-600/80 hover:bg-blue-600 transition-all font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-500/10"
+          title="Cycle ambient background video asset or static design"
+        >
+          <ArrowPathIcon className="w-3.5 h-3.5 animate-spin-slow" />
+          <span>Style: {currentMedia.name}</span>
+        </button>
+      </div>
+
       {/* Content Layer */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-30">
         <div className="max-w-5xl text-center mx-auto flex flex-col items-center">
@@ -111,36 +289,6 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
                <SparkleIcon className="w-4 h-4" />
                <span>Kansas & Missouri's Finest</span>
             </div>
-
-            {isGenerating && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                    <ArrowPathIcon className="w-3 h-3 animate-spin" />
-                    Rendering Your AI Vision...
-                </div>
-            )}
-
-            {!isGenerating && !isAiGenerated && (
-                <button 
-                  onClick={handleOpenSelectKey}
-                  className="group flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
-                >
-                    <SparkleIcon className="w-3 h-3 group-hover:text-blue-400" />
-                    Enable AI Custom Background
-                </button>
-            )}
-
-            {isAiGenerated && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-400/20 text-green-300 text-[10px] font-bold uppercase tracking-widest animate-fade-in">
-                    <SparkleIcon className="w-3 h-3" />
-                    AI Cinematic Render Active
-                </div>
-            )}
-            
-            {genError && (
-               <div className="text-[10px] text-red-400 font-bold uppercase tracking-widest bg-red-900/20 px-3 py-1 rounded-full border border-red-500/30">
-                   {genError}
-               </div>
-            )}
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] mb-8 tracking-tighter drop-shadow-2xl max-w-4xl text-white">

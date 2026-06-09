@@ -283,11 +283,11 @@ export const generateHeroVideo = async (prompt: string): Promise<string> => {
             }
             
             if (op.error) {
-                const errorMsg = String(op.error.message || op.error).toLowerCase();
+                const errorMsg = String((op.error as any).message || op.error).toLowerCase();
                 if (errorMsg.includes("permission") || errorMsg.includes("unsupported") || errorMsg.includes("billing")) {
                     throw new Error("VIDEO_NOT_SUPPORTED");
                 }
-                throw new Error(op.error.message || "Video operation failed");
+                throw new Error(String((op.error as any).message || "Video operation failed"));
             }
 
             const link = op.response?.generatedVideos?.[0]?.video?.uri;

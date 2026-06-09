@@ -56,4 +56,14 @@ const WarrantyModal: React.FC<WarrantyModalProps> = ({ isOpen, onClose }) => {
               <ShieldCheckIcon className="w-8 h-8 text-blue-600 mb-4" />
               <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2">Transferable Coverage</h4>
               <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                Selling your home? Our workmanship warranty is fully transferable
+                Selling your home? Our workmanship warranty is fully transferable to the next homeowner, increasing your property's resale value.
+              </p>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default WarrantyModal;

@@ -15,6 +15,7 @@ import AITools from './components/AITools';
 import LeadCaptureModal from './components/LeadCaptureModal';
 import LeadCaptureForm from './components/LeadCaptureForm';
 import AboutUsModal from './components/AboutUsModal';
+import Gallery from './components/Gallery';
 import GalleryModal from './components/GalleryModal';
 import ProjectVisualizerModal from './components/ProjectVisualizerModal';
 import VeoStudioModal from './components/VeoStudioModal';
@@ -98,6 +99,8 @@ const App: React.FC = () => {
           onVisualizerClick={() => setIsVisualizerModalOpen(true)}
           onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
         />
+        
+        <Gallery />
         
         <WhyChooseUs />
         <Testimonials />
