@@ -1,10 +1,8 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { 
   PaperAirplaneIcon, 
   XMarkIcon, 
-  MicrophoneIcon, 
-  SpeakerWaveIcon, 
   TrashIcon,
   SparkleIcon,
   CameraIcon,
@@ -15,16 +13,16 @@ import {
 } from './Icon';
 import { 
   sendMessageToChatbotStream, 
-  resetChatSession, 
-  createBlob
+  resetChatSession
 } from '../services/geminiService';
 import { ChatMessage } from '../types';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { useAudioProcessor } from '../hooks/useAudioProcessor';
+import VoiceAgentOrb from './VoiceAgentOrb';
+
+export type AIHubHandle = {
+  openHub: (tab?: 'chat' | 'voice' | 'tools') => void;
+};
 
 type HubTab = 'chat' | 'voice' | 'tools';
-type AgentStatus = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking' | 'error';
-type Transcription = { speaker: 'user' | 'model'; text: string };
 
 interface AIHubProps {
   onOpenEstimate: () => void;
@@ -43,11 +41,11 @@ interface AppointmentDetails {
 
 const INITIAL_MESSAGE_CONTENT = "Hello! I'm Hannah from Elite Roofing. May I ask whom I'm speaking with today?";
 
-const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onOpenVisualizer, onOpenDesignStudio }) => {
+const AIHub = forwardRef<AIHubHandle, AIHubProps>(({ onOpenEstimate, onOpenDamageAssessor, onOpenVisualizer, onOpenDesignStudio }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<HubTab>('chat');
   const [chatKey, setChatKey] = useState(0); 
-  const [messages, setMessages] = useState<(ChatMessage & { appointmentSummary?: AppointmentDetails })[]>(() => {
+  const [messages, setMessages] = useState<(ChatMessage & { appointmentSummary?: AppointmentDetails; showSwitchKeyButton?: boolean })[]>(() => {
     try {
       const saved = localStorage.getItem('eliteRoofingChatHistory');
       if (saved) return JSON.parse(saved);
@@ -57,25 +55,23 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const [voiceStatus, setVoiceStatus] = useState<AgentStatus>('idle');
-  const [voiceActive, setVoiceActive] = useState(false);
-  const [voiceTranscription, setVoiceTranscription] = useState<Transcription[]>([]);
-  const [currentVoiceInput, setCurrentVoiceInput] = useState('');
-  const [currentVoiceOutput, setCurrentVoiceOutput] = useState('');
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const voiceScrollRef = useRef<HTMLDivElement>(null);
-  const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const chatSessionIdRef = useRef<number>(0);
   const hubRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = useCallback((ref: React.RefObject<HTMLDivElement | null>, behavior: ScrollBehavior = 'smooth') => {
-    if (ref.current) {
+  useImperativeHandle(ref, () => ({
+    openHub: (tab = 'chat') => {
+      setIsOpen(true);
+      setActiveTab(tab);
+    }
+  }));
+
+  const scrollToBottom = useCallback((scrollRef: React.RefObject<HTMLDivElement | null>, behavior: ScrollBehavior = 'smooth') => {
+    if (scrollRef.current) {
         requestAnimationFrame(() => {
-            if (ref.current) ref.current.scrollTo({ top: ref.current.scrollHeight, behavior });
+            if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior });
         });
     }
   }, []);
@@ -115,29 +111,8 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
   }, [messages.length, isLoading]);
 
   useEffect(() => {
-    if (isOpen) scrollToBottom(activeTab === 'chat' ? chatScrollRef : voiceScrollRef);
-  }, [messages, voiceTranscription, currentVoiceInput, currentVoiceOutput, activeTab, isOpen, scrollToBottom]);
-
-  const handleAudioData = useCallback((audioData: Float32Array) => {
-    if (sessionPromiseRef.current) {
-        const pcmBlob = createBlob(audioData);
-        sessionPromiseRef.current.then(session => {
-            if (session) session.sendRealtimeInput({ media: pcmBlob });
-        });
-    }
-  }, []);
-
-  const { startProcessing, stopProcessing, playAudio, interruptPlayback } = useAudioProcessor(handleAudioData);
-
-  const endVoiceSession = useCallback(() => {
-    stopProcessing();
-    if (sessionPromiseRef.current) {
-        sessionPromiseRef.current.then(session => { if(session) session.close(); });
-        sessionPromiseRef.current = null;
-    }
-    setVoiceStatus('idle');
-    setVoiceActive(false);
-  }, [stopProcessing]);
+    if (isOpen) scrollToBottom(chatScrollRef);
+  }, [messages, isOpen, scrollToBottom]);
 
   const clearChat = () => {
     if (window.confirm("Erase conversation history?")) {
@@ -148,71 +123,17 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
       setUserInput('');
       setChatKey(prev => prev + 1);
       resetChatSession();
-      setVoiceTranscription([]);
-    }
-  };
-
-  const startVoiceSession = async () => {
-    try {
-        setVoiceError(null);
-        setVoiceStatus('connecting');
-        setVoiceActive(true);
-
-        const aistudio = (window as any).aistudio;
-        if (aistudio && !(await aistudio.hasSelectedApiKey())) {
-            await aistudio.openSelectKey();
-        }
-
-        const micStreamPromise = startProcessing();
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        sessionPromiseRef.current = ai.live.connect({
-            model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-            callbacks: {
-                onopen: () => {
-                    setVoiceStatus('listening');
-                    sessionPromiseRef.current?.then(session => {
-                        if (session) session.sendRealtimeInput({ text: "Introduce yourself as Hannah from Elite Roofing. Start by asking for the user's name." });
-                    });
-                },
-                onmessage: async (message: LiveServerMessage) => {
-                    const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                    if (audioData) { setVoiceStatus('speaking'); await playAudio(audioData); }
-                    if (message.serverContent?.inputTranscription) setCurrentVoiceInput(prev => prev + message.serverContent!.inputTranscription!.text);
-                    if (message.serverContent?.outputTranscription) setCurrentVoiceOutput(prev => prev + message.serverContent!.outputTranscription!.text);
-                    if (message.serverContent?.interrupted) interruptPlayback();
-                    if (message.serverContent?.turnComplete) {
-                        setVoiceTranscription(prev => [...prev, { speaker: 'user' as const, text: currentVoiceInput }, { speaker: 'model' as const, text: currentVoiceOutput }].filter(t => t.text));
-                        setCurrentVoiceInput(''); setCurrentVoiceOutput(''); setVoiceStatus('listening');
-                    }
-                },
-                onerror: (e) => { 
-                    console.error("Live Hub API Error:", e);
-                    setVoiceError("Connection lost. Please check your project billing or network.");
-                    setVoiceStatus('error');
-                },
-                onclose: () => {
-                    if (voiceStatus !== 'error') endVoiceSession();
-                },
-            },
-            config: {
-                responseModalities: [Modality.AUDIO],
-                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
-                systemInstruction: `You are Hannah, Elite's AI Receptionist. Be brief and professional.`,
-                inputAudioTranscription: {},
-                outputAudioTranscription: {},
-            },
-        });
-        await micStreamPromise;
-    } catch (error: any) { 
-        console.error("Voice Hub Start Error:", error);
-        setVoiceError("Microphone or API access denied.");
-        setVoiceStatus('error');
     }
   };
 
   const handleChatSend = async () => {
     if (!userInput.trim() || isLoading) return;
+    
+    const aistudio = (window as any).aistudio;
+    if (aistudio && !(await aistudio.hasSelectedApiKey())) {
+        await aistudio.openSelectKey();
+        return;
+    }
     
     setIsLoading(true);
     const text = userInput;
@@ -252,7 +173,18 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
         if (chatSessionIdRef.current === currentSessionId) {
             setMessages(prev => {
                 const next = [...prev];
-                if (next[placeholderIndex]) next[placeholderIndex].content = "I encountered an error. Please try again.";
+                if (next[placeholderIndex]) {
+                    const errorMsg = String(e.message || e);
+                    if (errorMsg.includes("QUOTA_EXHAUSTED") || errorMsg.includes("429") || errorMsg.includes("depleted") || errorMsg.includes("quota")) {
+                        next[placeholderIndex].content = "⚠️ Your API key's prepayment credits are depleted or quota limit has been exceeded.\n\nPlease top up your project credits on Google AI Studio, or click the button below to choose/switch to a different API key.";
+                        next[placeholderIndex].showSwitchKeyButton = true;
+                    } else if (errorMsg.includes("INVALID_KEY_OR_PROJECT") || errorMsg.includes("403") || errorMsg.includes("API_KEY_INVALID")) {
+                        next[placeholderIndex].content = "⚠️ The selected API key appears invalid or expired.\n\nPlease switch to a valid API key using the button below.";
+                        next[placeholderIndex].showSwitchKeyButton = true;
+                    } else {
+                        next[placeholderIndex].content = "I encountered an error. Please try again.\n\nDetail: " + errorMsg;
+                    }
+                }
                 return next;
             });
         }
@@ -324,9 +256,9 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
                         aria-controls={`hub-panel-${tab}`}
                         id={`tab-${tab}`}
                         onClick={() => setActiveTab(tab)} 
-                        className={`flex-1 py-2 rounded-lg text-[11px] font-black transition-all focus-visible:ring-2 focus-visible:ring-blue-600 ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-blue-800 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                        className={`flex-1 py-2.5 rounded-lg text-[11px] font-black transition-all focus-visible:ring-2 focus-visible:ring-blue-600 ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-blue-800 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
                     >
-                        {tab.toUpperCase()}
+                        {tab === 'chat' ? 'CHAT SCRIPT' : tab === 'voice' ? 'VOICE CALL' : 'INTERACTIVE TOOLS'}
                     </button>
                 ))}
             </nav>
@@ -347,6 +279,22 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
                                     <div className={`max-w-[85%] p-4 rounded-2xl text-[15px] leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-blue-700 text-white rounded-tr-none' : 'bg-gray-100 dark:bg-gray-800 dark:text-gray-100 rounded-tl-none border border-gray-200/50 dark:border-gray-700/50'}`}>
                                         <span className="sr-only">{msg.role === 'user' ? 'You said:' : 'Hannah said:'}</span>
                                         <p className="whitespace-pre-wrap">{msg.content || (isLoading && i === messages.length - 1 ? 'Hannah is typing...' : '')}</p>
+                                        {msg.showSwitchKeyButton && (
+                                            <div className="mt-3">
+                                                <button 
+                                                    onClick={async () => {
+                                                        const aistudio = (window as any).aistudio;
+                                                        if (aistudio) {
+                                                            await aistudio.openSelectKey();
+                                                        }
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-md transition-all duration-200"
+                                                >
+                                                    <SparkleIcon className="w-3.5 h-3.5 animate-pulse" />
+                                                    Switch API Key
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     {msg.appointmentSummary && (
                                         <div className="w-full max-w-[90%] bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 p-5 rounded-2xl shadow-sm" aria-label="Appointment Confirmation Detail">
@@ -397,84 +345,15 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
             )}
 
             {activeTab === 'voice' && (
-                <div id="hub-panel-voice" role="tabpanel" aria-labelledby="tab-voice" className="flex-1 flex flex-col p-8 animate-fade-in overflow-hidden">
-                    {!voiceActive ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-                            <div className="w-28 h-28 bg-blue-50 dark:bg-blue-900/10 rounded-full flex items-center justify-center border border-blue-100 dark:border-blue-800 shadow-2xl" aria-hidden="true">
-                                <MicrophoneIcon className="w-12 h-12 text-blue-700" />
-                            </div>
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-2xl dark:text-white">Voice Concierge</h3>
-                                <p className="text-sm text-gray-700 dark:text-gray-400 max-w-[280px] leading-relaxed">Hannah is ready to talk. Use your microphone to book an appointment or ask questions.</p>
-                            </div>
-                            <button 
-                                onClick={startVoiceSession} 
-                                className="bg-blue-700 text-white px-10 py-4 rounded-2xl font-bold text-base shadow-xl hover:bg-blue-800 transition-all focus-visible:ring-4 focus-visible:ring-blue-600/30"
-                                aria-label="Start voice call with Hannah"
-                            >
-                                Start Conversation
-                            </button>
+                <div id="hub-panel-voice" role="tabpanel" aria-labelledby="tab-voice" className="flex-1 flex flex-col justify-center items-center p-6 space-y-6 animate-fade-in text-center">
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-[2rem] border border-blue-100/60 dark:border-blue-900/20 w-full max-w-[340px] flex flex-col items-center shadow-inner">
+                        <VoiceAgentOrb className="my-4" />
+                        
+                        <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 text-xs text-gray-500 dark:text-gray-400 space-y-2 max-w-[260px]">
+                            <p className="font-semibold text-gray-700 dark:text-gray-300">Hands-Free Roofing Assistant</p>
+                            <p>Speak with Hannah about roof designs, local climate estimations, storm damage, or booking your premium home consultation.</p>
                         </div>
-                    ) : (
-                        <div className="flex-1 flex flex-col overflow-hidden">
-                            <div 
-                                ref={voiceScrollRef} 
-                                className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2"
-                                role="log"
-                                aria-live="polite"
-                                aria-label="Voice Transcript"
-                            >
-                                {voiceTranscription.map((t, i) => (
-                                    <div key={i} className={`flex flex-col ${t.speaker === 'user' ? 'items-end' : 'items-start'}`}>
-                                        <div className={`max-w-[85%] p-4 rounded-2xl text-[14px] ${t.speaker === 'user' ? 'bg-blue-700 text-white rounded-tr-none' : 'bg-gray-100 dark:bg-gray-800 dark:text-white rounded-tl-none border border-gray-200/50 dark:border-gray-700/50'}`}>
-                                            <span className="sr-only">{t.speaker === 'user' ? 'You said:' : 'Hannah said:'}</span>
-                                            {t.text}
-                                        </div>
-                                    </div>
-                                ))}
-                                {(currentVoiceInput || currentVoiceOutput) && (
-                                    <div className={`flex flex-col ${currentVoiceInput ? 'items-end' : 'items-start'} animate-pulse`}>
-                                        <div className={`max-w-[85%] p-3 rounded-2xl text-[14px] italic ${currentVoiceInput ? 'bg-blue-600/30 text-white' : 'bg-gray-100 dark:bg-gray-800/80 dark:text-white'}`}>
-                                            {currentVoiceInput || currentVoiceOutput}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className={`bg-gray-50 dark:bg-gray-800/50 p-8 rounded-[2.5rem] text-center border-2 border-transparent transition-all ${voiceStatus === 'error' ? 'border-red-500' : ''}`}>
-                                {voiceStatus === 'error' ? (
-                                    <div className="space-y-4" role="alert" aria-live="assertive">
-                                        <p className="text-sm font-bold text-red-700">{voiceError}</p>
-                                        <button 
-                                            onClick={() => { setVoiceActive(false); setVoiceStatus('idle'); }} 
-                                            className="bg-gray-900 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest"
-                                        >
-                                            Dismiss
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex justify-center gap-1.5 mb-6 h-10 items-center" aria-hidden="true">
-                                            {[1,2,3,4,5].map(i => (
-                                                <div 
-                                                    key={i} 
-                                                    className={`w-1.5 bg-blue-700 rounded-full transition-all duration-300 ${voiceStatus === 'speaking' ? 'h-full animate-bounce' : 'h-1.5'}`} 
-                                                    style={{ animationDelay: `${i*0.08}s` }}
-                                                ></div>
-                                            ))}
-                                        </div>
-                                        <p className="text-[11px] font-black text-blue-800 dark:text-blue-400 uppercase tracking-widest mb-6" aria-live="assertive">Status: {voiceStatus}</p>
-                                        <button 
-                                            onClick={endVoiceSession} 
-                                            className="bg-red-600 text-white px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all"
-                                            aria-label="End call"
-                                        >
-                                            End Call
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                    </div>
                 </div>
             )}
 
@@ -527,6 +406,6 @@ const AIHub: React.FC<AIHubProps> = ({ onOpenEstimate, onOpenDamageAssessor, onO
       </div>
     </>
   );
-};
+});
 
 export default AIHub;

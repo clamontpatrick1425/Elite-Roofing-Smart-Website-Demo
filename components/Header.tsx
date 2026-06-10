@@ -232,8 +232,8 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={onVoiceAgentClick}
                     className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-base uppercase tracking-wider"
                 >
-                    <MicrophoneIcon className="w-5 h-5" />
-                    <span>Call Now</span>
+                    <SparkleIcon className="w-5 h-5 animate-pulse" />
+                    <span>Ask Hannah</span>
                 </button>
                 <ThemeToggle />
               </div>

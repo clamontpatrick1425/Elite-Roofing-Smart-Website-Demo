@@ -7,6 +7,13 @@ type EstimateResult = {
   lowEstimate: number;
   highEstimate: number;
   explanation: string;
+  weather?: {
+    locationName: string;
+    temperatureF: number | null;
+    windMph: number | null;
+    precipitation: number | null;
+    humidity: number | null;
+  } | null;
 };
 
 interface EstimateCalculatorProps {
@@ -43,6 +50,13 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const aistudio = (window as any).aistudio;
+    if (aistudio && !(await aistudio.hasSelectedApiKey())) {
+        await aistudio.openSelectKey();
+        return;
+    }
+
     setError('');
     setLoading(true);
     setResult(null);
@@ -141,29 +155,77 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
         );
       case 4:
         return (
-          <div className="text-center">
+          <div className="text-center" id="appointment-confirmation">
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Your AI-Powered Estimate</h3>
-            <p className="text-gray-600 mb-6">This is a preliminary estimate. A firm quote requires an on-site inspection.</p>
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
-                <div className="flex justify-center items-baseline gap-4">
-                  <span className="text-4xl md:text-5xl font-extrabold text-blue-900">
+            <p className="text-gray-600 mb-6 no-print">This is a preliminary estimate. A firm quote requires an on-site inspection.</p>
+            
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg text-left shadow-sm">
+                <div className="flex justify-center items-baseline gap-2 sm:gap-4 mb-4">
+                  <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-blue-900">
                     ${result?.lowEstimate.toLocaleString()}
                   </span>
-                  <span className="text-2xl font-semibold text-gray-600">to</span>
-                  <span className="text-4xl md:text-5xl font-extrabold text-blue-900">
+                  <span className="text-xl sm:text-2xl font-semibold text-gray-500 font-light">to</span>
+                  <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-blue-900">
                     ${result?.highEstimate.toLocaleString()}
                   </span>
                 </div>
-                <p className="mt-4 text-gray-700">{result?.explanation}</p>
+
+                {/* Weather details container */}
+                {result?.weather && (
+                  <div className="mb-4 p-4 bg-white border border-blue-200/60 rounded-xl shadow-sm">
+                    <h4 className="font-bold text-blue-950 flex items-center gap-1.5 text-sm sm:text-base mb-2">
+                       <span>🌤️ Climate Adaptations Activated</span>
+                    </h4>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">
+                       This estimate is dynamically optimized based on real-time climate data for <strong>{result.weather.locationName}</strong>:
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
+                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                          <span className="block text-gray-500 text-[10px] uppercase font-semibold">Temperature</span>
+                          <span className="font-bold text-blue-900">{result.weather.temperatureF !== null ? `${result.weather.temperatureF}°F` : 'N/A'}</span>
+                       </div>
+                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                          <span className="block text-gray-500 text-[10px] uppercase font-semibold">Wind Speed</span>
+                          <span className="font-bold text-blue-900">{result.weather.windMph !== null ? `${result.weather.windMph} mph` : 'N/A'}</span>
+                       </div>
+                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                          <span className="block text-gray-500 text-[10px] uppercase font-semibold">Precipitation</span>
+                          <span className="font-bold text-blue-900">{result.weather.precipitation !== null ? `${result.weather.precipitation} mm` : '0 mm'}</span>
+                       </div>
+                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                          <span className="block text-gray-500 text-[10px] uppercase font-semibold">Humidity</span>
+                          <span className="font-bold text-blue-900">{result.weather.humidity !== null ? `${result.weather.humidity}%` : 'N/A'}</span>
+                       </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line border-t border-gray-150 pt-4 mt-2">
+                  {result?.explanation}
+                </div>
             </div>
-            <p className="mt-6 text-lg font-semibold">Ready for the next step?</p>
-            <button
-              type="button"
-              onClick={onScheduleClick}
-              className="mt-2 inline-block bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105"
-            >
-                Schedule a Free Inspection
-            </button>
+
+            <p className="mt-6 text-lg font-semibold no-print">Ready for the next step?</p>
+            <div className="mt-3 flex flex-col sm:flex-row gap-3 justify-center items-center no-print">
+              <button
+                type="button"
+                onClick={onScheduleClick}
+                className="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-green-700 transition-all duration-300 transform hover:-translate-y-0.5 text-sm sm:text-base"
+              >
+                  Schedule Free Inspection
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm sm:text-base"
+              >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.615 0-1.101-.483-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-14.326 0C3.768 7.44 3 8.375 3 9.456V15.75a2.25 2.25 0 002.25 2.25h1.091M9 9h6m-6 3h6m-6-6h6" />
+                  </svg>
+                  <span>Print Estimate</span>
+              </button>
+            </div>
           </div>
         );
       default:
@@ -175,7 +237,7 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
   
   return (
     <>
-      <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600 text-center mb-12">
+      <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600 text-center mb-12 no-print">
         Answer a few questions to get a real-time, data-driven estimate for your roofing project in under 60 seconds.
       </p>
       
@@ -194,7 +256,7 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
         <form onSubmit={handleSubmit}>
           {renderStep()}
           
-          <div className="mt-8 flex justify-between items-center">
+          <div className={`mt-8 flex justify-between items-center ${step === 4 ? 'no-print' : ''}`}>
             {step > 1 && step < 4 && (
               <button type="button" onClick={prevStep} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
                 Back

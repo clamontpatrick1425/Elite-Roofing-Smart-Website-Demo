@@ -4,6 +4,7 @@ import { ShieldCheckIcon, WrenchScrewdriverIcon, MagnifyingGlassIcon, BoltIcon }
 
 export interface ExtendedGalleryImage extends GalleryImage {
     aiPrompt?: string;
+    isSplit?: boolean;
 }
 
 export const SERVICES: Service[] = [
@@ -96,8 +97,8 @@ export const GALLERY_IMAGES: ExtendedGalleryImage[] = [
         aiPrompt: "A high-resolution, side-by-side comparison of a residential home's roof. Left side (Before): Old, weathered gray asphalt shingles with visible curling, moss growth, and missing granules; cloudy overcast lighting. Right side (After): Brand new, high-definition architectural shingles in a deep charcoal black; crisp lines, perfect flashing, and bright sunny lighting. Photographed from a 45-degree drone angle to show texture and scale. Professional real estate photography style."
     },
     {
-        before: 'https://images.pexels.com/photos/443383/pexels-photo-443383.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        after: 'https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+        before: 'https://images.unsplash.com/photo-1635334469641-61b7e0d37901?auto=format&fit=crop&q=80&w=800',
+        after: 'https://images.unsplash.com/photo-1628624747186-a941c476b7ef?auto=format&fit=crop&w=800&q=80',
         title: 'Storm Damage Repair',
         description: 'Repaired significant wind damage, replacing missing tiles with modern impact-resistant materials.',
         aiPrompt: "A side-by-side comparison of a roof during storm damage repair. Left side: A house with massive storm damage, missing roof tiles, and debris. Right side: The same house with a perfectly repaired, modern impact-resistant tile roof. Professional drone photography."

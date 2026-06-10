@@ -15,6 +15,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, item }) =>
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dynamicImages, setDynamicImages] = useState<Record<number, string>>({});
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Synchronize internal index with the item passed from parent
   useEffect(() => {
@@ -25,6 +26,11 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, item }) =>
       }
     }
   }, [item, isOpen]);
+
+  // Clear errors when index triggers
+  useEffect(() => {
+    setError(null);
+  }, [currentIndex, isOpen]);
 
   if (!isOpen) {
     return null;
@@ -52,6 +58,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, item }) =>
     if (isRegenerating) return;
     
     setIsRegenerating(true);
+    setError(null);
     try {
         const aistudio = (window as any).aistudio;
         if (aistudio && !(await aistudio.hasSelectedApiKey())) {
@@ -61,9 +68,14 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, item }) =>
         const prompt = currentItem.aiPrompt || `${currentItem.title} transformation`;
         const result = await generateComparisonImage(prompt);
         setDynamicImages(prev => ({ ...prev, [currentIndex]: result }));
-    } catch (e) {
+    } catch (e: any) {
         console.error("Failed to regenerate gallery image:", e);
-        alert("Sarah encountered an issue rendering this visual. Please try again or check your API key.");
+        const errMsg = String(e?.message || e).toLowerCase();
+        if (errMsg.includes("quota") || errMsg.includes("exhausted") || errMsg.includes("limit") || errMsg.includes("depleted") || errMsg.includes("429")) {
+            setError("Prepayment credits spent or quota limit exceeded. Check your billing or switch keys.");
+        } else {
+            setError("Sarah encountered an issue rendering this visual. Please verify your selected Key.");
+        }
     } finally {
         setIsRegenerating(false);
     }
@@ -152,6 +164,27 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, item }) =>
                         <p className="mt-3 text-[10px] text-gray-400 text-center italic">
                             Generate a high-res comparison using your custom prompt.
                         </p>
+                        {error && (
+                            <div className="mt-4 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl flex flex-col items-center text-center gap-2 animate-fade-in">
+                                <p className="text-[11px] font-bold text-red-600 dark:text-red-400 leading-tight">
+                                    {error}
+                                </p>
+                                {((window as any).aistudio) && (
+                                    <button 
+                                        onClick={async () => {
+                                            const aistudio = (window as any).aistudio;
+                                            if (aistudio) {
+                                                await aistudio.openSelectKey();
+                                            }
+                                        }}
+                                        className="text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                                    >
+                                        <SparkleIcon className="w-3 h-3" />
+                                        Switch Key
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-10 pt-6 border-t border-gray-50 dark:border-gray-700 flex flex-col gap-3">

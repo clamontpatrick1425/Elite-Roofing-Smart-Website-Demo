@@ -23,8 +23,17 @@ async function decodeAudioData(
   sampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
+  const bytesPerSample = 2; // Int16 PCM is 2 bytes per sample
+  const bufferLength = Math.floor(data.byteLength / bytesPerSample);
+  const dataInt16 = new Int16Array(bufferLength);
+  
+  // Safe extraction of 16-bit PCM little-endian values, avoiding alignment/RangeError issues
+  const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  for (let i = 0; i < bufferLength; i++) {
+    dataInt16[i] = dataView.getInt16(i * bytesPerSample, true);
+  }
+
+  const frameCount = bufferLength / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 
   for (let channel = 0; channel < numChannels; channel++) {
@@ -52,13 +61,27 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaStreamRef.current = stream;
             
-            const inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            let inputContext: AudioContext;
+            try {
+                inputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            } catch (e) {
+                console.warn("Could not create input AudioContext at 16000Hz, falling back to native rate:", e);
+                inputContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
             if (inputContext.state === 'suspended') {
                 await inputContext.resume();
             }
             inputAudioContextRef.current = inputContext;
 
-            const outputContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            let outputContext: AudioContext;
+            try {
+                // Instantiating the AudioContext at its native/browser rate is highly compatible and matches any sound card.
+                // The AudioBuffer decoded at 24000Hz below will be transparently resampled by the browser.
+                outputContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn("Could not create output AudioContext, falling back to basic:", e);
+                outputContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
             if (outputContext.state === 'suspended') {
                 await outputContext.resume();
             }
@@ -104,6 +127,15 @@ export const useAudioProcessor = (onAudioData: (data: Float32Array) => void) => 
     const playAudio = useCallback(async (base64Audio: string) => {
         const outputContext = outputAudioContextRef.current;
         if (!outputContext || outputContext.state === 'closed') return;
+
+        // Auto-resume standard suspended state (e.g. strict browser Autoplay Policies)
+        if (outputContext.state === 'suspended') {
+            try {
+                await outputContext.resume();
+            } catch (e) {
+                console.warn("Failed to automatically resume output AudioContext:", e);
+            }
+        }
     
         try {
             const decodedData = decode(base64Audio);

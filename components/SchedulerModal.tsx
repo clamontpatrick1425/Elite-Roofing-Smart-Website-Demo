@@ -14,18 +14,20 @@ const SchedulerModal: React.FC<SchedulerModalProps> = ({ isOpen, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in-up"
+        className="w-full max-w-2xl relative animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="p-5 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-          <h2 className="text-2xl font-bold text-gray-900">Book Your Free Inspection</h2>
-          <button onClick={onClose} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors">
-            <XMarkIcon className="w-7 h-7" />
-          </button>
-        </header>
-        <main className="flex-1 overflow-y-auto">
+        {/* Floating Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/30 text-white/70 hover:text-white hover:bg-black/55 hover:scale-105 border border-white/10 transition-all cursor-pointer shadow-lg"
+          aria-label="Close scheduling modal"
+        >
+          <XMarkIcon className="w-5 h-5 text-white" />
+        </button>
+        <main className="w-full">
           <Scheduler showTitle={false} onBookingConfirmed={onClose} />
         </main>
       </div>

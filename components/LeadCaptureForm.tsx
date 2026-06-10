@@ -10,6 +10,9 @@ const LeadCaptureForm: React.FC = () => {
         company: '',
         phone: '',
         email: '',
+        address: '',
+        city: '',
+        state: '',
         message: '',
         service: SERVICES[0].title,
     });
@@ -71,7 +74,17 @@ const LeadCaptureForm: React.FC = () => {
     }, [error]);
 
     const handleReset = () => {
-        setFormData({ name: '', company: '', phone: '', email: '', message: '', service: SERVICES[0].title });
+        setFormData({ 
+            name: '', 
+            company: '', 
+            phone: '', 
+            email: '', 
+            address: '',
+            city: '',
+            state: '',
+            message: '', 
+            service: SERVICES[0].title 
+        });
         setSuccess(false);
         setLoading(false);
         setError('');
@@ -96,7 +109,7 @@ const LeadCaptureForm: React.FC = () => {
         e.preventDefault();
         setError('');
         setLoading(true);
-        if (!formData.name || !formData.phone || !formData.email) {
+        if (!formData.name || !formData.phone || !formData.email || !formData.address || !formData.city || !formData.state) {
             setError('Please fill out all required fields.');
             setLoading(false);
             return;
@@ -107,9 +120,24 @@ const LeadCaptureForm: React.FC = () => {
             generateCaptcha();
             return;
         }
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setLoading(false);
-        setSuccess(true);
+        try {
+            const response = await fetch('/api/leads', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to submit lead to backend.');
+            }
+            setLoading(false);
+            setSuccess(true);
+        } catch (err: any) {
+            setError(err.message || 'An error occurred during submission. Please try again.');
+            setLoading(false);
+        }
     };
 
     return (
@@ -157,6 +185,22 @@ const LeadCaptureForm: React.FC = () => {
                         <div className="space-y-1.5">
                             <label htmlFor="email-static" className="block text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Email Address *</label>
                             <input type="email" name="email" id="email-static" required value={formData.email} onChange={handleChange} autoComplete="email" className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-4 focus:ring-blue-600/10 dark:text-white" aria-required="true"/>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label htmlFor="address-static" className="block text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Street Address *</label>
+                            <input type="text" name="address" id="address-static" required value={formData.address} onChange={handleChange} placeholder="123 Main Street" className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-4 focus:ring-blue-600/10 dark:text-white" aria-required="true"/>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label htmlFor="city-static" className="block text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">City *</label>
+                                <input type="text" name="city" id="city-static" required value={formData.city} onChange={handleChange} placeholder="Kansas City" className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-4 focus:ring-blue-600/10 dark:text-white" aria-required="true"/>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="state-static" className="block text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">State *</label>
+                                <input type="text" name="state" id="state-static" required value={formData.state} onChange={handleChange} placeholder="MO" className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-4 focus:ring-blue-600/10 dark:text-white" aria-required="true"/>
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">

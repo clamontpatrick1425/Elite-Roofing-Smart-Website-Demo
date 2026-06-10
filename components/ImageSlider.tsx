@@ -6,6 +6,7 @@ import { GalleryImage } from '../types';
 
 interface ExtendedGalleryImage extends GalleryImage {
     isComparisonFullImage?: boolean;
+    isSplit?: boolean;
 }
 
 interface ImageSliderProps {
@@ -56,8 +57,10 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
             <img 
                 src={item.after} 
                 alt="After" 
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                className={item.isSplit ? "absolute top-0 h-full object-cover pointer-events-none" : "absolute inset-0 w-full h-full object-cover pointer-events-none"}
+                style={item.isSplit ? { width: '200%', maxWidth: 'none', left: '-100%' } : {}}
                 draggable={false}
+                referrerPolicy="no-referrer"
             />
 
             {!item.isComparisonFullImage && (
@@ -70,8 +73,10 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
                         <img 
                             src={item.before} 
                             alt="Before" 
-                            className="w-full h-full object-cover pointer-events-none"
+                            className={item.isSplit ? "absolute top-0 h-full object-cover pointer-events-none" : "w-full h-full object-cover pointer-events-none"}
+                            style={item.isSplit ? { width: '200%', maxWidth: 'none', left: '0px' } : {}}
                             draggable={false}
+                            referrerPolicy="no-referrer"
                         />
                     </div>
                     {/* Slider Handle */}
@@ -88,8 +93,12 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
             )}
 
             {/* Labels */}
-            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-black tracking-widest pointer-events-none border border-white/20">BEFORE</div>
-            <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-black tracking-widest pointer-events-none border border-white/20">AFTER</div>
+            {!item.isSplit && (
+                <>
+                    <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-black tracking-widest pointer-events-none border border-white/20">BEFORE</div>
+                    <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-black tracking-widest pointer-events-none border border-white/20">AFTER</div>
+                </>
+            )}
             
             {item.isComparisonFullImage && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2">

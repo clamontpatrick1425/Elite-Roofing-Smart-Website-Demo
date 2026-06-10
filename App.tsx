@@ -6,7 +6,7 @@ import Services from './components/Services';
 import WhyChooseUs from './components/WhyChooseUs';
 import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
-import AIHub from './components/AIHub';
+import AIHub, { AIHubHandle } from './components/AIHub';
 import FAQModal from './components/FAQModal';
 import SchedulerModal from './components/SchedulerModal';
 import DamageAssessorModal from './components/DamageAssessorModal';
@@ -25,7 +25,6 @@ import RatingWidget from './components/RatingWidget';
 import ReviewsModal from './components/ReviewsModal';
 import FeedbackPlatformModal from './components/FeedbackPlatformModal';
 import { GalleryImage } from './types';
-import { VoiceAgentHandle } from './components/VoiceAgentOrb';
 import { WEBSITE_AUDIT_HTML } from './constants';
 
 const App: React.FC = () => {
@@ -42,7 +41,7 @@ const App: React.FC = () => {
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [isFeedbackPlatformModalOpen, setIsFeedbackPlatformModalOpen] = useState(false);
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryImage | null>(null);
-  const voiceAgentRef = useRef<VoiceAgentHandle>(null);
+  const aiHubRef = useRef<AIHubHandle>(null);
 
   const handleScheduleFromModal = () => {
     setIsDamageAssessorModalOpen(false);
@@ -57,8 +56,8 @@ const App: React.FC = () => {
     setIsGalleryModalOpen(true);
   };
   
-  const handleActivateVoiceAgent = () => {
-    voiceAgentRef.current?.activate();
+  const handleOpenChatAssistant = () => {
+    aiHubRef.current?.openHub('voice');
   };
 
   const handleOpenAudit = () => {
@@ -78,7 +77,7 @@ const App: React.FC = () => {
         onScheduleClick={() => setIsSchedulerModalOpen(true)}
         onContactClick={() => setIsLeadCaptureModalOpen(true)}
         onGalleryItemClick={handleOpenGalleryModal}
-        onVoiceAgentClick={handleActivateVoiceAgent}
+        onVoiceAgentClick={handleOpenChatAssistant}
         onAuditClick={handleOpenAudit}
         onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
         onVisualizerClick={() => setIsVisualizerModalOpen(true)}
@@ -88,7 +87,7 @@ const App: React.FC = () => {
         <Hero 
           onScheduleClick={() => setIsSchedulerModalOpen(true)} 
           onEstimateClick={() => setIsEstimateModalOpen(true)}
-          voiceAgentRef={voiceAgentRef}
+          onChatClick={handleOpenChatAssistant}
         />
         
         <Services />
@@ -129,6 +128,7 @@ const App: React.FC = () => {
       />
       
       <AIHub 
+        ref={aiHubRef}
         onOpenEstimate={() => setIsEstimateModalOpen(true)} 
         onOpenDamageAssessor={() => setIsDamageAssessorModalOpen(true)} 
         onOpenVisualizer={() => setIsVisualizerModalOpen(true)}

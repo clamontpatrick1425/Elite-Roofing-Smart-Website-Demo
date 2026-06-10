@@ -1,22 +1,21 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import VoiceAgentOrb, { VoiceAgentHandle } from './VoiceAgentOrb';
 import { ShieldCheckIcon, UserCircleIcon, SparkleIcon, ArrowPathIcon } from './Icon';
 import { getVideoBlob } from '../services/videoDb';
 
 interface HeroProps {
     onScheduleClick: () => void;
     onEstimateClick: () => void;
-    voiceAgentRef: React.Ref<VoiceAgentHandle>;
+    onChatClick: () => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgentRef }) => {
+const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatClick }) => {
   const HERO_IMAGE = 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2';
   
   const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Load custom video if generated
@@ -29,11 +28,9 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
           if (blob) {
             const blobUrl = URL.createObjectURL(blob);
             setCustomVideoUrl(blobUrl);
-            setCurrentMediaIndex(0); // auto-select the AI video
           }
         } else if (stored && !stored.startsWith('blob:')) {
           setCustomVideoUrl(stored);
-          setCurrentMediaIndex(0);
         }
       } catch (e) {
         console.error("Failed to load custom video", e);
@@ -44,7 +41,7 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
 
     const handleUpdate = () => {
       loadVideoSource();
-      setIsVideoLoaded(false);
+      setIsVideoLoaded(true);
     };
 
     window.addEventListener('hero-video-updated', handleUpdate);
@@ -55,12 +52,19 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
 
   // Built-in pool of stable backgrounds (including a static slate option for silent/disabled view)
   const BACKGROUND_MEDIA_OPTIONS = useMemo(() => {
-    const list = [];
+    const list: Array<{ name: string; type: 'video' | 'image'; url: string; poster: string }> = [
+      {
+        name: "Premium Roofing Loop",
+        type: "video",
+        url: "/hero-video.mp4",
+        poster: HERO_IMAGE
+      }
+    ];
     
     if (customVideoUrl) {
       list.push({
         name: "✨ AI Design Render",
-        type: "video" as const,
+        type: "video",
         url: customVideoUrl,
         poster: HERO_IMAGE
       });
@@ -69,25 +73,25 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
     list.push(
       {
         name: "Modern House Shingles",
-        type: "video" as const,
+        type: "video",
         url: "https://player.vimeo.com/external/435674703.sd.mp4?s=79fa3ffd107e20ad4cf909d224850021c3b2e5ef&profile_id=139&oauth2_token_id=57447761",
         poster: HERO_IMAGE
       },
       {
         name: "Scenic Sunset Aerial",
-        type: "video" as const,
+        type: "video",
         url: "https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c02cba73d113f1d41359b4e19cbd0a56&profile_id=139&oauth2_token_id=57447761",
         poster: HERO_IMAGE
       },
       {
         name: "Standard Landscape Loop",
-        type: "video" as const,
+        type: "video",
         url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
         poster: HERO_IMAGE
       },
       {
         name: "Static Slate Image",
-        type: "image" as const,
+        type: "image",
         url: HERO_IMAGE,
         poster: HERO_IMAGE
       }
@@ -97,6 +101,18 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   }, [customVideoUrl]);
 
   const currentMedia = BACKGROUND_MEDIA_OPTIONS[currentMediaIndex] || BACKGROUND_MEDIA_OPTIONS[0];
+
+  // Prevent video remaining invisible if loading/autoplay is blocked by browser policies
+  useEffect(() => {
+    if (currentMedia.type === 'video') {
+      const timer = setTimeout(() => {
+        setIsVideoLoaded(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVideoLoaded(true);
+    }
+  }, [currentMediaIndex, currentMedia.url, currentMedia.type]);
 
   const togglePlayPause = () => {
     const el = videoRef.current;
@@ -113,111 +129,128 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
   };
 
   const handleCycleMedia = () => {
-    setIsVideoLoaded(false);
     const nextIndex = (currentMediaIndex + 1) % BACKGROUND_MEDIA_OPTIONS.length;
     setCurrentMediaIndex(nextIndex);
     setIsPlaying(true);
   };
 
-  // Synchronous and immediate programmatic autoplay enforcers
+  // Synchronize playing state with DOM video player nicely
   useEffect(() => {
     const el = videoRef.current;
-    let fallbackCleanup: (() => void) | null = null;
+    if (!el || currentMedia.type !== 'video') return;
 
-    if (el && currentMedia.type === 'video') {
-      el.defaultMuted = true;
-      el.muted = true;
-      el.playsInline = true;
-      el.setAttribute('muted', 'true');
-      el.setAttribute('playsinline', 'true');
-      
-      el.load();
-      
-      const playPromise = el.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsVideoLoaded(true);
-            setIsPlaying(true);
-          })
-          .catch((err) => {
-            console.warn("Autoplay waiting for video stream or interaction:", err);
-            
-            // Bypasses browser autoplay block on screen touch/click interactions
-            const startFallbackPlay = () => {
-              if (el) {
-                el.play()
-                  .then(() => {
-                    setIsVideoLoaded(true);
-                    setIsPlaying(true);
-                    if (fallbackCleanup) fallbackCleanup();
-                  })
-                  .catch(e => console.warn("Deferred interaction play bypass failed:", e));
-              }
-            };
-            
-            fallbackCleanup = () => {
-              window.removeEventListener('click', startFallbackPlay);
-              window.removeEventListener('touchstart', startFallbackPlay);
-            };
+    // Apply proper muted/playsinline configurations programmatically
+    el.defaultMuted = true;
+    el.muted = true;
+    el.playsInline = true;
+    el.setAttribute('muted', '');
+    el.setAttribute('playsinline', '');
 
-            window.addEventListener('click', startFallbackPlay);
-            window.addEventListener('touchstart', startFallbackPlay);
-          });
+    let active = true;
+    let gestureRegistered = false;
+
+    const handleUserGesture = async () => {
+      if (!active || !el) return;
+      try {
+        await el.play();
+        if (active) setIsVideoLoaded(true);
+      } catch (e) {
+        console.warn("Deferred gesture play failed:", e);
       }
+    };
+
+    const removeListeners = () => {
+      window.removeEventListener('click', handleUserGesture);
+      window.removeEventListener('touchstart', handleUserGesture);
+    };
+
+    const startPlay = async () => {
+      if (!el || !active) return;
+      try {
+        await el.play();
+        if (active) setIsVideoLoaded(true);
+      } catch (err) {
+        console.warn("Muted video autoplay pending interaction:", err);
+        if (active) {
+          window.addEventListener('click', handleUserGesture, { once: true });
+          window.addEventListener('touchstart', handleUserGesture, { once: true });
+          gestureRegistered = true;
+        }
+      }
+    };
+
+    if (isPlaying) {
+      startPlay();
+    } else {
+      el.pause();
     }
 
     return () => {
-      if (fallbackCleanup) {
-        fallbackCleanup();
+      active = false;
+      if (gestureRegistered) {
+        removeListeners();
       }
     };
-  }, [currentMediaIndex, customVideoUrl, currentMedia.type]);
+  }, [isPlaying, currentMedia.url, currentMedia.type]);
 
   const handleLoadedData = () => {
-    if (videoRef.current && currentMedia.type === 'video') {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = true;
-      videoRef.current.play()
-        .then(() => {
-          setIsVideoLoaded(true);
-          setIsPlaying(true);
-        })
-        .catch(e => console.warn("Deferred play failed:", e));
-    }
+    setIsVideoLoaded(true);
   };
 
-  const handleVideoError = () => {
-    console.warn("Active video source failed, cycling to next fallback stream.");
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const target = e.target as HTMLVideoElement;
+    const error = target.error;
+    
+    // Ignore aborted loads, which are common when sources transition or React re-renders the element
+    if (error && error.code === 1) { // MediaError.MEDIA_ERR_ABORTED
+      console.log("Video loading aborted during transition");
+      return;
+    }
+
+    console.warn("Active video source failed to play:", currentMedia.name, error);
+    
     const stored = localStorage.getItem('custom_hero_video');
     if (stored && currentMedia.name.includes("AI")) {
       localStorage.removeItem('custom_hero_video');
       setCustomVideoUrl(null);
     }
-    handleCycleMedia();
+  };
+
+  const handleSectionInteraction = () => {
+    const el = videoRef.current;
+    if (el && currentMedia.type === 'video' && isPlaying) {
+      el.play()
+        .then(() => {
+          setIsVideoLoaded(true);
+        })
+        .catch(() => {});
+    }
   };
 
   return (
-    <section className="relative bg-gray-900 text-white py-20 sm:py-24 md:py-32 min-h-[700px] sm:min-h-[800px] flex items-center overflow-hidden">
+    <section 
+      onMouseEnter={handleSectionInteraction}
+      className="relative bg-gray-900 text-white py-20 sm:py-24 md:py-32 min-h-[700px] sm:min-h-[800px] flex items-center overflow-hidden"
+    >
       {/* Background Layers */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           {/* Static Background Image Fallback */}
           <div
-              className={`absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-[1500ms] ${
-                currentMedia.type === 'image' || !isVideoLoaded ? 'opacity-100' : 'opacity-40'
-              }`}
+              className="absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-[1500ms]"
               style={{ backgroundImage: `url('${HERO_IMAGE}')` }}
           ></div>
 
-          {/* Background Video (unthrottled opacity class to ensure play triggers) */}
+          {/* Background Video (unthrottled autoplay loop) */}
           {currentMedia.type === 'video' && (
             <video 
               ref={videoRef}
+              key={currentMedia.url}
               src={currentMedia.url}
-              autoPlay={isPlaying}
+              autoPlay={true}
               loop={true}
               muted={true}
               playsInline={true}
+              preload="auto"
               onLoadedData={handleLoadedData}
               onCanPlay={handleLoadedData}
               onLoadedMetadata={handleLoadedData}
@@ -228,7 +261,7 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
               onError={handleVideoError}
               poster={currentMedia.poster}
               className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${
-                isVideoLoaded ? 'opacity-100' : 'opacity-0'
+                isVideoLoaded ? 'opacity-100' : 'opacity-85'
               }`}
             />
           )}
@@ -308,9 +341,13 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
               Claim Your Free Quote
             </button>
             
-            <div className="hidden md:block">
-                 <VoiceAgentOrb ref={voiceAgentRef} />
-            </div>
+            <button
+              onClick={onChatClick}
+              className="w-full sm:w-auto bg-gray-850 hover:bg-gray-800 text-white font-bold py-5 px-12 rounded-2xl shadow-xl border border-white/15 hover:border-white/30 transition-all duration-300 transform hover:-translate-y-1 text-xl min-w-[280px] flex items-center justify-center gap-3"
+            >
+              <SparkleIcon className="w-6 h-6 text-blue-400 animate-pulse" />
+              <span>Ask Hannah AI</span>
+            </button>
 
             <button
               onClick={onScheduleClick}
@@ -351,8 +388,14 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, voiceAgen
               </div>
           </div>
            
-           <div className="mt-16 md:hidden">
-                 <VoiceAgentOrb ref={voiceAgentRef} />
+           <div className="mt-16 md:hidden flex justify-center w-full">
+                <button
+                   onClick={onChatClick}
+                   className="w-full max-w-[280px] bg-gray-850 hover:bg-gray-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg border border-white/10 transition-all flex items-center justify-center gap-3 text-base"
+                >
+                  <SparkleIcon className="w-5 h-5 text-blue-400 animate-pulse" />
+                  <span>Ask Hannah AI</span>
+                </button>
             </div>
         </div>
       </div>

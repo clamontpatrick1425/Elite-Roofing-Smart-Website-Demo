@@ -19,10 +19,10 @@ const Gallery: React.FC = () => {
           {GALLERY_IMAGES.map((item, index) => (
             <div key={index} className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden flex flex-col">
               <div className="relative aspect-[4/3]">
-                {item.title === 'Asphalt Shingle Replacement' ? (
+                {item.before ? (
                    <ImageSlider item={item} />
                 ) : (
-                   <img src={item.after} alt={item.title} className="w-full h-full object-cover" />
+                   <img src={item.after} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 )}
               </div>
               <div className="p-6 flex-grow">
