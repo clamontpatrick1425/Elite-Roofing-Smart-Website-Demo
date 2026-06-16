@@ -17,6 +17,53 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
     const [sliderPosition, setSliderPosition] = useState(50);
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Dynamic state to support live fallbacks and local uploads
+    const [beforeSrc, setBeforeSrc] = useState(item.before || '');
+    const [afterSrc, setAfterSrc] = useState(item.after || '');
+    const [beforeError, setBeforeError] = useState(false);
+    const [afterError, setAfterError] = useState(false);
+
+    // Update state when item props change
+    React.useEffect(() => {
+        setBeforeSrc(item.before || '');
+        setAfterSrc(item.after || '');
+        setBeforeError(false);
+        setAfterError(false);
+    }, [item.before, item.after]);
+
+    // High fidelity fallbacks that remain active and descriptive (quality roof textures)
+    const fallbackBefore = 'https://images.unsplash.com/photo-1508333706533-1ec43ecb1606?auto=format&fit=crop&q=80&w=1200';
+    const fallbackAfter = 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1200';
+
+    const handleBeforeError = () => {
+        if (!beforeError) {
+            setBeforeError(true);
+            setBeforeSrc(fallbackBefore);
+        }
+    };
+
+    const handleAfterError = () => {
+        if (!afterError) {
+            setAfterError(true);
+            setAfterSrc(fallbackAfter);
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const localUrl = URL.createObjectURL(file);
+            setBeforeSrc(localUrl);
+            setBeforeError(false); // Reset to display the newly selected local file
+        }
+    };
+
+    const triggerFileInput = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        fileInputRef.current?.click();
+    };
 
     const handleMove = useCallback((clientX: number) => {
         if (!containerRef.current || item.isComparisonFullImage) return;
@@ -44,7 +91,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
     return (
         <div 
             ref={containerRef}
-            className={`relative w-full aspect-[4/3] select-none overflow-hidden rounded-2xl shadow-2xl ${item.isComparisonFullImage ? 'cursor-default' : 'cursor-ew-resize'}`}
+            className={`relative w-full h-full min-h-[250px] aspect-[4/3] select-none overflow-hidden rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 ${item.isComparisonFullImage ? 'cursor-default' : 'cursor-ew-resize'}`}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -55,11 +102,12 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
         >
             {/* After Image */}
             <img 
-                src={item.after} 
+                src={afterSrc} 
                 alt="After" 
                 className={item.isSplit ? "absolute top-0 h-full object-cover pointer-events-none" : "absolute inset-0 w-full h-full object-cover pointer-events-none"}
                 style={item.isSplit ? { width: '200%', maxWidth: 'none', left: '-100%' } : {}}
                 draggable={false}
+                onError={handleAfterError}
                 referrerPolicy="no-referrer"
             />
 
@@ -71,11 +119,12 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
                         style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
                     >
                         <img 
-                            src={item.before} 
+                            src={beforeSrc} 
                             alt="Before" 
                             className={item.isSplit ? "absolute top-0 h-full object-cover pointer-events-none" : "w-full h-full object-cover pointer-events-none"}
                             style={item.isSplit ? { width: '200%', maxWidth: 'none', left: '0px' } : {}}
                             draggable={false}
+                            onError={handleBeforeError}
                             referrerPolicy="no-referrer"
                         />
                     </div>
@@ -100,9 +149,10 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ item }) => {
                 </>
             )}
             
+
+
             {item.isComparisonFullImage && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2">
-                    {/* FIX: SparkleIcon is now properly imported from './Icon' */}
                     <SparkleIcon className="w-3 h-3" />
                     AI-Generated Comparison
                 </div>

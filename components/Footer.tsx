@@ -6,6 +6,9 @@ interface FooterProps {
   onScheduleClick: () => void;
   onEstimateClick: () => void;
   onPrivacyPolicyClick: () => void;
+  onAboutUsClick: () => void;
+  onStormDamageClick?: () => void;
+  onFinancingClick?: () => void;
 }
 
 const YoutubeIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -14,7 +17,7 @@ const YoutubeIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPrivacyPolicyClick }) => {
+const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPrivacyPolicyClick, onAboutUsClick, onStormDamageClick, onFinancingClick }) => {
   const openWarrantyPopup = () => {
     const width = 1100;
     const height = 850;
@@ -43,6 +46,9 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
               <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Residential</a></li>
               <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Commercial</a></li>
               <li><a href="#services" className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Roof Repair</a></li>
+              {onStormDamageClick && (
+                <li><button onClick={onStormDamageClick} className="text-gray-300 hover:text-white text-left transition-colors text-xl font-medium">Storm Damage Restoration</button></li>
+              )}
             </ul>
           </div>
 
@@ -50,7 +56,7 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
           <div>
             <h3 className="text-3xl font-bold mb-8 text-gray-100">About Us</h3>
             <ul className="space-y-4">
-              <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Who We Are</button></li>
+              <li><button onClick={onAboutUsClick} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Who We Are</button></li>
               <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Locations</button></li>
               <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Customer Reviews</button></li>
               <li><button className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Community Support</button></li>
@@ -63,7 +69,7 @@ const Footer: React.FC<FooterProps> = ({ onScheduleClick, onEstimateClick, onPri
           <div>
             <h3 className="text-3xl font-bold mb-8 text-gray-100">Resources</h3>
             <ul className="space-y-4">
-              <li><button onClick={onEstimateClick} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Financing</button></li>
+              <li><button onClick={onFinancingClick || onEstimateClick} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Financing</button></li>
               <li><button onClick={openWarrantyPopup} className="text-gray-300 hover:text-white transition-colors text-xl font-medium">Warranty</button></li>
             </ul>
           </div>

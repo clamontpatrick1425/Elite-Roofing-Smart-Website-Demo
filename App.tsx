@@ -24,10 +24,13 @@ import ServiceAreaValidator from './components/ServiceAreaValidator';
 import RatingWidget from './components/RatingWidget';
 import ReviewsModal from './components/ReviewsModal';
 import FeedbackPlatformModal from './components/FeedbackPlatformModal';
+import StormDamagePage from './components/StormDamagePage';
+import FinancingPage from './components/FinancingPage';
 import { GalleryImage } from './types';
 import { WEBSITE_AUDIT_HTML } from './constants';
 
 const App: React.FC = () => {
+  const [currentView, setCurrentView] = useState<'home' | 'storm-damage' | 'financing'>('home');
   const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
   const [isSchedulerModalOpen, setIsSchedulerModalOpen] = useState(false);
   const [isDamageAssessorModalOpen, setIsDamageAssessorModalOpen] = useState(false);
@@ -81,50 +84,72 @@ const App: React.FC = () => {
         onAuditClick={handleOpenAudit}
         onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
         onVisualizerClick={() => setIsVisualizerModalOpen(true)}
+        onStormDamageClick={() => setCurrentView('storm-damage')}
+        onLogoClick={() => setCurrentView('home')}
+        onFinancingClick={() => setCurrentView('financing')}
+        currentView={currentView}
       />
       
       <main className="flex flex-col pt-20 md:pt-24">
-        <Hero 
-          onScheduleClick={() => setIsSchedulerModalOpen(true)} 
-          onEstimateClick={() => setIsEstimateModalOpen(true)}
-          onChatClick={handleOpenChatAssistant}
-        />
-        
-        <Services />
-        
-        <AITools
-          onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
-          onEstimateClick={() => setIsEstimateModalOpen(true)}
-          onVisualizerClick={() => setIsVisualizerModalOpen(true)}
-          onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
-        />
-        
-        <Gallery />
-        
-        <WhyChooseUs />
-        <Testimonials />
+        {currentView === 'home' ? (
+          <>
+            <Hero 
+              onScheduleClick={() => setIsSchedulerModalOpen(true)} 
+              onEstimateClick={() => setIsEstimateModalOpen(true)}
+              onChatClick={handleOpenChatAssistant}
+            />
+            
+            <Services onFinancingClick={() => setCurrentView('financing')} />
+            
+            <AITools
+              onDamageAssessorClick={() => setIsDamageAssessorModalOpen(true)}
+              onEstimateClick={() => setIsEstimateModalOpen(true)}
+              onVisualizerClick={() => setIsVisualizerModalOpen(true)}
+              onVeoStudioClick={() => setIsDesignStudioModalOpen(true)}
+            />
+            
+            <Gallery />
+            
+            <WhyChooseUs />
+            <Testimonials />
 
-        <section className="py-12 bg-white dark:bg-gray-900">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-5xl mx-auto transform hover:-translate-y-1 transition-transform duration-300">
-                    <ServiceAreaValidator variant="card" />
+            <section className="py-12 bg-white dark:bg-gray-900">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-5xl mx-auto transform hover:-translate-y-1 transition-transform duration-300">
+                        <ServiceAreaValidator variant="card" />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <section className="py-20 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    <LeadCaptureForm />
+            <section className="py-20 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
+                        <LeadCaptureForm />
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
+          </>
+        ) : currentView === 'storm-damage' ? (
+          <StormDamagePage 
+            onBackToHome={() => setCurrentView('home')} 
+            onScheduleClick={() => setIsSchedulerModalOpen(true)} 
+          />
+        ) : (
+          <FinancingPage 
+            onBackToHome={() => setCurrentView('home')} 
+            onScheduleClick={() => setIsSchedulerModalOpen(true)}
+            onEstimateClick={() => setIsEstimateModalOpen(true)}
+          />
+        )}
       </main>
 
       <Footer 
         onScheduleClick={() => setIsSchedulerModalOpen(true)} 
         onEstimateClick={() => setIsEstimateModalOpen(true)}
         onPrivacyPolicyClick={() => setIsPrivacyPolicyModalOpen(true)}
+        onAboutUsClick={() => setIsAboutUsModalOpen(true)}
+        onStormDamageClick={() => setCurrentView('storm-damage')}
+        onFinancingClick={() => setCurrentView('financing')}
       />
       
       <AIHub 

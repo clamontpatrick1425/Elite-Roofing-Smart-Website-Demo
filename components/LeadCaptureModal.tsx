@@ -14,7 +14,8 @@ const LeadCaptureModal: React.FC<LeadCaptureModalProps> = ({ isOpen, onClose }) 
         email: '',
         service: 'Roof Replacement',
         materialType: 'Asphalt Shingles',
-        message: ''
+        message: '',
+        askAboutFinancing: false
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -70,7 +71,7 @@ const LeadCaptureModal: React.FC<LeadCaptureModalProps> = ({ isOpen, onClose }) 
     }, [captcha]);
 
     const handleReset = () => {
-        setFormData({ name: '', phone: '', email: '', service: 'Roof Replacement', materialType: 'Asphalt Shingles', message: '' });
+        setFormData({ name: '', phone: '', email: '', service: 'Roof Replacement', materialType: 'Asphalt Shingles', message: '', askAboutFinancing: false });
         setSuccess(false);
         setLoading(false);
         setError('');
@@ -206,6 +207,29 @@ const LeadCaptureModal: React.FC<LeadCaptureModalProps> = ({ isOpen, onClose }) 
                                     <div className="mt-2 flex items-center gap-4 flex-wrap"><canvas ref={canvasRef} width="180" height="50" className="border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700" /><button type="button" onClick={generateCaptcha} title="Refresh CAPTCHA" className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"><ArrowPathIcon className="w-6 h-6" /></button></div>
                                     <input type="text" name="captcha" id="captcha-modal" required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} placeholder="Enter text from image" className="mt-2 p-3 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" maxLength={6} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"/>
                                 </div>
+
+                                {/* Financing Integration Option */}
+                                <div>
+                                    <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl">
+                                        <input
+                                            type="checkbox"
+                                            name="askAboutFinancing"
+                                            id="askAboutFinancing-modal"
+                                            checked={formData.askAboutFinancing}
+                                            onChange={(e) => setFormData({ ...formData, askAboutFinancing: e.target.checked })}
+                                            className="w-5 h-5 mt-0.5 rounded text-emerald-600 accent-emerald-500 border-gray-300 dark:border-gray-600 focus:ring-emerald-500 cursor-pointer"
+                                        />
+                                        <div className="flex flex-col">
+                                            <label htmlFor="askAboutFinancing-modal" className="text-sm font-extrabold text-slate-800 dark:text-slate-100 cursor-pointer select-none">
+                                                Ask about contractor financing solutions
+                                            </label>
+                                            <p className="text-[11px] text-emerald-800 dark:text-emerald-400 font-semibold">
+                                                Payments from <strong className="font-mono">$189/mo</strong> via our Hearth & GreenSky programs. No obligation!
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {error && <p className="text-sm text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-300 p-3 rounded-md">{error}</p>}
                                 <div><button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-500">{loading ? 'Sending...' : 'Send My Request'}{loading && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}</button></div>
                             </form>

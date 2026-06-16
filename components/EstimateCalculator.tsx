@@ -170,6 +170,19 @@ const EstimateCalculator: React.FC<EstimateCalculatorProps> = ({ onScheduleClick
                   </span>
                 </div>
 
+                {/* Dynamic Financing Amortization Output */}
+                <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+                  <h4 className="font-extrabold text-emerald-950 flex items-center gap-1.5 text-xs sm:text-sm mb-1 uppercase tracking-wider">
+                    💸 Low Monthly Payments Available
+                  </h4>
+                  <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed font-semibold">
+                    We partner with <strong>Hearth</strong> & <strong>GreenSky</strong> to offer predictable monthly plans. This project can cost from only <strong className="font-mono text-emerald-600">${Math.round((result?.lowEstimate || 14500) * 0.013)}/mo</strong> to <strong className="font-mono text-emerald-600">${Math.round((result?.highEstimate || 18000) * 0.013)}/mo</strong>*
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-1 leading-normal">
+                    *Estimated using standard 120-month 8.99% fixed APR schedules. Pre-qualifying takes 60 seconds with no impact on credit scores. Ask in your follow-up check!
+                  </p>
+                </div>
+
                 {/* Weather details container */}
                 {result?.weather && (
                   <div className="mb-4 p-4 bg-white border border-blue-200/60 rounded-xl shadow-sm">

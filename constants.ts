@@ -90,22 +90,24 @@ export const TESTIMONIALS: Testimonial[] = [
 
 export const GALLERY_IMAGES: ExtendedGalleryImage[] = [
     {
-        before: 'https://images.pexels.com/photos/1209990/pexels-photo-1209990.jpeg?auto=compress&cs=tinysrgb&w=800',
-        after: 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+        before: 'https://images.unsplash.com/photo-1632759162444-14304111882d?auto=format&fit=crop&q=80&w=1200',
+        after: 'https://images.unsplash.com/photo-1615874959474-d609969a20ed?auto=format&fit=crop&q=80&w=1200',
+        isSplit: false,
         title: 'Asphalt Shingle Replacement',
         description: 'Complete removal of old, worn-out shingles and installation of a new architectural shingle roof.',
         aiPrompt: "A high-resolution, side-by-side comparison of a residential home's roof. Left side (Before): Old, weathered gray asphalt shingles with visible curling, moss growth, and missing granules; cloudy overcast lighting. Right side (After): Brand new, high-definition architectural shingles in a deep charcoal black; crisp lines, perfect flashing, and bright sunny lighting. Photographed from a 45-degree drone angle to show texture and scale. Professional real estate photography style."
     },
     {
-        before: 'https://images.unsplash.com/photo-1635334469641-61b7e0d37901?auto=format&fit=crop&q=80&w=800',
-        after: 'https://images.unsplash.com/photo-1628624747186-a941c476b7ef?auto=format&fit=crop&w=800&q=80',
+        before: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1200',
+        after: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200',
+        isSplit: false,
         title: 'Storm Damage Repair',
         description: 'Repaired significant wind damage, replacing missing tiles with modern impact-resistant materials.',
         aiPrompt: "A side-by-side comparison of a roof during storm damage repair. Left side: A house with massive storm damage, missing roof tiles, and debris. Right side: The same house with a perfectly repaired, modern impact-resistant tile roof. Professional drone photography."
     },
     {
-        before: 'https://images.pexels.com/photos/159353/architecture-modern-house-exterior-glass-159353.jpeg?auto=compress&cs=tinysrgb&w=800',
-        after: 'https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+        before: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=1200',
+        after: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1200',
         title: 'Flat Roof Conversion',
         description: 'Converted an old flat roof to a modern TPO membrane system for maximum energy efficiency.',
         aiPrompt: "A comparison of a commercial/residential flat roof conversion. Left: Cracked black tar paper roof. Right: Clean, bright white modern TPO membrane roof. High-end real estate angle."

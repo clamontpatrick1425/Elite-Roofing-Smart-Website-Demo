@@ -13,9 +13,8 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
   const HERO_IMAGE = 'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2';
   
   const [customVideoUrl, setCustomVideoUrl] = useState<string | null>(null);
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(true);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Load custom video if generated
@@ -41,7 +40,8 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
 
     const handleUpdate = () => {
       loadVideoSource();
-      setIsVideoLoaded(true);
+      setIsVideoLoaded(false);
+      setIsPlaying(false);
     };
 
     window.addEventListener('hero-video-updated', handleUpdate);
@@ -50,94 +50,21 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
     };
   }, []);
 
-  // Built-in pool of stable backgrounds (including a static slate option for silent/disabled view)
-  const BACKGROUND_MEDIA_OPTIONS = useMemo(() => {
-    const list: Array<{ name: string; type: 'video' | 'image'; url: string; poster: string }> = [
-      {
-        name: "Premium Roofing Loop",
-        type: "video",
-        url: "/hero-video.mp4",
-        poster: HERO_IMAGE
-      }
-    ];
-    
-    if (customVideoUrl) {
-      list.push({
-        name: "✨ AI Design Render",
-        type: "video",
-        url: customVideoUrl,
-        poster: HERO_IMAGE
-      });
-    }
-    
-    list.push(
-      {
-        name: "Modern House Shingles",
-        type: "video",
-        url: "https://player.vimeo.com/external/435674703.sd.mp4?s=79fa3ffd107e20ad4cf909d224850021c3b2e5ef&profile_id=139&oauth2_token_id=57447761",
-        poster: HERO_IMAGE
-      },
-      {
-        name: "Scenic Sunset Aerial",
-        type: "video",
-        url: "https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c02cba73d113f1d41359b4e19cbd0a56&profile_id=139&oauth2_token_id=57447761",
-        poster: HERO_IMAGE
-      },
-      {
-        name: "Standard Landscape Loop",
-        type: "video",
-        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-        poster: HERO_IMAGE
-      },
-      {
-        name: "Static Slate Image",
-        type: "image",
-        url: HERO_IMAGE,
-        poster: HERO_IMAGE
-      }
-    );
-    
-    return list;
-  }, [customVideoUrl]);
-
-  const currentMedia = BACKGROUND_MEDIA_OPTIONS[currentMediaIndex] || BACKGROUND_MEDIA_OPTIONS[0];
+  // Use custom video if generated, otherwise default to premium local loop
+  const videoUrl = customVideoUrl || "/hero-video.mp4";
 
   // Prevent video remaining invisible if loading/autoplay is blocked by browser policies
   useEffect(() => {
-    if (currentMedia.type === 'video') {
-      const timer = setTimeout(() => {
-        setIsVideoLoaded(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
+    const timer = setTimeout(() => {
       setIsVideoLoaded(true);
-    }
-  }, [currentMediaIndex, currentMedia.url, currentMedia.type]);
-
-  const togglePlayPause = () => {
-    const el = videoRef.current;
-    if (el) {
-      if (isPlaying) {
-        el.pause();
-        setIsPlaying(false);
-      } else {
-        el.play()
-          .then(() => setIsPlaying(true))
-          .catch(e => console.warn("Failed to play video programmatically:", e));
-      }
-    }
-  };
-
-  const handleCycleMedia = () => {
-    const nextIndex = (currentMediaIndex + 1) % BACKGROUND_MEDIA_OPTIONS.length;
-    setCurrentMediaIndex(nextIndex);
-    setIsPlaying(true);
-  };
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [videoUrl]);
 
   // Synchronize playing state with DOM video player nicely
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || currentMedia.type !== 'video') return;
+    if (!el) return;
 
     // Apply proper muted/playsinline configurations programmatically
     el.defaultMuted = true;
@@ -153,7 +80,10 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
       if (!active || !el) return;
       try {
         await el.play();
-        if (active) setIsVideoLoaded(true);
+        if (active) {
+          setIsVideoLoaded(true);
+          setIsPlaying(true);
+        }
       } catch (e) {
         console.warn("Deferred gesture play failed:", e);
       }
@@ -168,7 +98,10 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
       if (!el || !active) return;
       try {
         await el.play();
-        if (active) setIsVideoLoaded(true);
+        if (active) {
+          setIsVideoLoaded(true);
+          setIsPlaying(true);
+        }
       } catch (err) {
         console.warn("Muted video autoplay pending interaction:", err);
         if (active) {
@@ -179,11 +112,7 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
       }
     };
 
-    if (isPlaying) {
-      startPlay();
-    } else {
-      el.pause();
-    }
+    startPlay();
 
     return () => {
       active = false;
@@ -191,7 +120,7 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
         removeListeners();
       }
     };
-  }, [isPlaying, currentMedia.url, currentMedia.type]);
+  }, [videoUrl]);
 
   const handleLoadedData = () => {
     setIsVideoLoaded(true);
@@ -207,10 +136,11 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
       return;
     }
 
-    console.warn("Active video source failed to play:", currentMedia.name, error);
+    console.warn("Active video source failed to play:", videoUrl, error);
+    setIsPlaying(false);
     
     const stored = localStorage.getItem('custom_hero_video');
-    if (stored && currentMedia.name.includes("AI")) {
+    if (stored) {
       localStorage.removeItem('custom_hero_video');
       setCustomVideoUrl(null);
     }
@@ -218,18 +148,74 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
 
   const handleSectionInteraction = () => {
     const el = videoRef.current;
-    if (el && currentMedia.type === 'video' && isPlaying) {
+    if (el) {
       el.play()
         .then(() => {
           setIsVideoLoaded(true);
+          setIsPlaying(true);
         })
         .catch(() => {});
     }
   };
 
+  // Listen to general window events to trigger video play when user moves or scrolls for robust background autoplay
+  useEffect(() => {
+    let intervalId: any = null;
+    
+    const triggerPlay = () => {
+      const el = videoRef.current;
+      if (el) {
+        el.play()
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch(() => {});
+      }
+    };
+
+    // Attempt to start play immediately on load or state update
+    triggerPlay();
+
+    // Continuous health check: if the video is paused but should be playing, kick-start it.
+    intervalId = setInterval(() => {
+      const el = videoRef.current;
+      if (el && el.paused) {
+        el.play()
+          .then(() => {
+            setIsVideoLoaded(true);
+            setIsPlaying(true);
+          })
+          .catch(() => {});
+      } else if (el && !el.paused) {
+        setIsPlaying(true);
+      }
+    }, 800);
+
+    // Register handlers for various interaction streams to trigger quick video play initialization
+    window.addEventListener('scroll', triggerPlay, { passive: true });
+    window.addEventListener('click', triggerPlay);
+    window.addEventListener('touchstart', triggerPlay, { passive: true });
+    window.addEventListener('mousemove', triggerPlay, { passive: true });
+    window.addEventListener('pointerdown', triggerPlay, { passive: true });
+    window.addEventListener('mouseover', triggerPlay, { passive: true });
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      window.removeEventListener('scroll', triggerPlay);
+      window.removeEventListener('click', triggerPlay);
+      window.removeEventListener('touchstart', triggerPlay);
+      window.removeEventListener('mousemove', triggerPlay);
+      window.removeEventListener('pointerdown', triggerPlay);
+      window.removeEventListener('mouseover', triggerPlay);
+    };
+  }, [videoUrl]);
+
   return (
     <section 
       onMouseEnter={handleSectionInteraction}
+      onTouchStart={handleSectionInteraction}
+      onClick={handleSectionInteraction}
+      onMouseMove={handleSectionInteraction}
       className="relative bg-gray-900 text-white py-20 sm:py-24 md:py-32 min-h-[700px] sm:min-h-[800px] flex items-center overflow-hidden"
     >
       {/* Background Layers */}
@@ -240,77 +226,39 @@ const Hero: React.FC<HeroProps> = ({ onScheduleClick, onEstimateClick, onChatCli
               style={{ backgroundImage: `url('${HERO_IMAGE}')` }}
           ></div>
 
-          {/* Background Video (unthrottled autoplay loop) */}
-          {currentMedia.type === 'video' && (
-            <video 
-              ref={videoRef}
-              key={currentMedia.url}
-              src={currentMedia.url}
-              autoPlay={true}
-              loop={true}
-              muted={true}
-              playsInline={true}
-              preload="auto"
-              onLoadedData={handleLoadedData}
-              onCanPlay={handleLoadedData}
-              onLoadedMetadata={handleLoadedData}
-              onPlay={() => {
-                setIsVideoLoaded(true);
-                setIsPlaying(true);
-              }}
-              onError={handleVideoError}
-              poster={currentMedia.poster}
-              className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${
-                isVideoLoaded ? 'opacity-100' : 'opacity-85'
-              }`}
-            />
-          )}
+          {/* Background Video (unthrottled autoplay loop with direct src attribute) */}
+          <video 
+            ref={videoRef}
+            key={videoUrl}
+            src={videoUrl}
+            autoPlay={true}
+            loop={true}
+            muted={true}
+            playsInline={true}
+            preload="auto"
+            onLoadedData={() => {
+              setIsVideoLoaded(true);
+            }}
+            onCanPlay={() => {
+              setIsVideoLoaded(true);
+            }}
+            onLoadedMetadata={() => {
+              setIsVideoLoaded(true);
+            }}
+            onPlay={() => {
+              setIsVideoLoaded(true);
+              setIsPlaying(true);
+            }}
+            onError={handleVideoError}
+            poster={HERO_IMAGE}
+            className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-1000 ${
+              isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          />
           
           {/* Gradients and Overlays */}
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/40 to-gray-900/80 z-20"></div>
           <div className="absolute inset-0 bg-black/15 z-20"></div>
-      </div>
-      
-      {/* Ambient Background Media Control Board */}
-      <div className="absolute bottom-6 right-6 z-40 bg-black/45 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-3 shadow-2xl animate-fade-in pointer-events-auto">
-        <span className="text-[10px] uppercase font-black tracking-widest text-white/50 pl-1 select-none">
-          Ambient Control
-        </span>
-        <div className="h-4 w-[1px] bg-white/10"></div>
-        
-        {/* Play/Pause Button */}
-        {currentMedia.type === 'video' && (
-          <button
-            onClick={togglePlayPause}
-            className="p-1 px-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-all font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
-            title={isPlaying ? "Pause background loop" : "Play background loop"}
-          >
-            {isPlaying ? (
-              <>
-                <span className="inline-block w-1 h-3 bg-white rounded-sm"></span>
-                <span className="inline-block w-1 h-3 bg-white rounded-sm"></span>
-                <span>Pause</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                <span>Play</span>
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Change Background Style Carousel */}
-        <button
-          onClick={handleCycleMedia}
-          className="p-1 px-2.5 rounded-lg text-white bg-blue-600/80 hover:bg-blue-600 transition-all font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-500/10"
-          title="Cycle ambient background video asset or static design"
-        >
-          <ArrowPathIcon className="w-3.5 h-3.5 animate-spin-slow" />
-          <span>Style: {currentMedia.name}</span>
-        </button>
       </div>
 
       {/* Content Layer */}

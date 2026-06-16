@@ -643,7 +643,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
@@ -722,6 +722,15 @@ async function startServer() {
 
       // Notify the client that connection is successful
       clientWs.send(JSON.stringify({ connected: true }));
+
+      // Have the AI Voice Agent initiate the call right away by warmly greeting the user first
+      try {
+        await liveSession.sendRealtimeInput({
+          text: "Please initiate the call right now by warmly greeting the user as Hannah from Elite Roofing, introduce yourself as their AI digital assistant, and ask how you can assist them today with their roofing projects."
+        });
+      } catch (greetingErr) {
+        console.error("Failed to send initial greeting trigger to Live API:", greetingErr);
+      }
 
     } catch (err: any) {
       console.error("Failed to connect to Gemini Live:", err);

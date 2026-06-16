@@ -15,6 +15,7 @@ const LeadCaptureForm: React.FC = () => {
         state: '',
         message: '',
         service: SERVICES[0].title,
+        askAboutFinancing: false,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -83,7 +84,8 @@ const LeadCaptureForm: React.FC = () => {
             city: '',
             state: '',
             message: '', 
-            service: SERVICES[0].title 
+            service: SERVICES[0].title,
+            askAboutFinancing: false
         });
         setSuccess(false);
         setLoading(false);
@@ -225,6 +227,26 @@ const LeadCaptureForm: React.FC = () => {
                                 </button>
                             </div>
                             <input type="text" name="captcha" id="captcha-static" required value={captchaInput} onChange={e => setCaptchaInput(e.target.value)} placeholder="Type the code from the image" className="w-full p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl focus:ring-4 focus:ring-blue-600/10 dark:text-white" aria-required="true" autoComplete="off"/>
+                        </div>
+
+                        {/* Ask About Financing Checkbox */}
+                        <div className="flex items-start gap-4 p-5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-3xl">
+                            <input
+                                type="checkbox"
+                                name="askAboutFinancing"
+                                id="askAboutFinancing"
+                                checked={formData.askAboutFinancing}
+                                onChange={(e) => setFormData({ ...formData, askAboutFinancing: e.target.checked })}
+                                className="w-5 h-5 mt-1 rounded text-emerald-600 accent-emerald-500 border-gray-300 dark:border-gray-600 focus:ring-emerald-500 cursor-pointer"
+                            />
+                            <div className="flex flex-col">
+                                <label htmlFor="askAboutFinancing" className="text-base font-extrabold text-slate-800 dark:text-slate-100 cursor-pointer select-none">
+                                    Ask about contractor financing solutions
+                                </label>
+                                <p className="text-xs text-emerald-800 dark:text-emerald-400 font-semibold mt-1">
+                                    Partnered with Hearth & GreenSky. Get custom roofs starting from <strong className="font-mono">$189/mo</strong>. No credit score impact to pre-qualify!
+                                </p>
+                            </div>
                         </div>
 
                         <div className="pt-6">
